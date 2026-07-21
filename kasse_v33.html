@@ -1,0 +1,2440 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kasse – Kletterwald Paderborn</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f7;--card:#fff;--border:rgba(0,0,0,.1);--text:#1a1a1a;--muted:#6b7280;
+  --accent:#e9ebef;--primary:#030213;--pfg:#fff;--dest:#d4183d;--radius:10px;--ibg:#f3f3f5;
+  --grbg:#f0fdf4;--grbr:#bbf7d0;--grtx:#166534;--grsb:#16a34a;
+  --blbg:#eff6ff;--blbr:#bfdbfe;--bltx:#1d4ed8;--blsb:#2563eb;
+  --rdbg:#fef2f2;--rdbr:#fecaca;--rdtx:#991b1b;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+#app{display:flex;width:100%;height:100vh;overflow:hidden;position:relative}
+
+/* LEFT */
+#lp{flex:1;display:flex;flex-direction:column;overflow:hidden;transition:all .3s}
+#lp.cart-collapsed{flex:1}
+#lp-inner{flex:1;padding:22px;overflow-y:auto;padding-bottom:22px;display:flex;flex-direction:column}
+#lp.cart-collapsed #lp-inner{padding-bottom:160px}
+
+/* RIGHT PANEL (side) */
+#rp{width:400px;background:var(--card);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .3s,opacity .3s;position:relative}
+#rp.hidden{width:0;opacity:0;pointer-events:none;border:none}
+
+/* BOTTOM BAR (collapsed) */
+#cart-bar{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:var(--card);border-top:1px solid var(--border);
+  padding:14px 20px 18px;z-index:30;box-shadow:0 -4px 20px rgba(0,0,0,.1);
+}
+#cart-bar.visible{display:block}
+
+/* TYPE */
+h1{font-size:21px;font-weight:700}h2{font-size:17px;font-weight:600}h3{font-size:15px;font-weight:600}h4{font-size:13px;font-weight:600}
+
+/* NAV */
+#nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px;flex-shrink:0}
+.nav-btn{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:var(--radius);border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:13px;font-weight:500;transition:background .15s;white-space:nowrap}
+.nav-btn:hover{background:var(--accent)}.nav-btn.active{background:var(--primary);color:var(--pfg);border-color:var(--primary)}
+.nav-btn svg{width:15px;height:15px;flex-shrink:0}
+
+/* PRICE CARDS */
+.sec-div{border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
+.sec-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:2px}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;text-align:left;transition:background .15s,transform .1s;width:100%}
+.pcard:hover{background:var(--accent)}.pcard:active{transform:scale(.98)}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.pn{font-size:14px;font-weight:600;margin-bottom:1px}.pa{font-size:11px;color:var(--muted)}
+.pp{font-size:22px;font-weight:700}.plus-ico{width:16px;height:16px;color:var(--muted);flex-shrink:0}.pcard:hover .plus-ico{color:var(--text)}
+
+/* ORDERS VIEW */
+.o-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.print-btn{display:flex;align-items:center;gap:6px;padding:7px 13px;font-size:12px;font-weight:500;border-radius:var(--radius);background:var(--primary);color:var(--pfg);border:none;cursor:pointer}
+.print-btn:hover{opacity:.85}.print-btn svg{width:14px;height:14px}
+
+/* SCHICHT */
+.schicht{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.flbl{font-size:11px;color:var(--muted);font-weight:500;display:block;margin-bottom:4px}
+.finput{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--ibg);font-size:12px;outline:none}
+.finput:focus{border-color:#999;box-shadow:0 0 0 2px rgba(3,2,19,.08)}
+
+/* KASSENRECHNER */
+.kassenr{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px}
+.kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:8px}
+.kres{margin-top:8px;padding:9px 11px;border-radius:8px;border:1px solid;font-size:12px}
+.kres.ok{background:var(--grbg);border-color:var(--grbr);color:var(--grtx)}
+.kres.err{background:var(--rdbg);border-color:var(--rdbr);color:var(--rdtx)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:12px}
+.sbox{border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px}
+.sbox.tot{background:var(--bg)}.sbox.cas{background:var(--grbg);border-color:var(--grbr)}.sbox.ecc{background:var(--blbg);border-color:var(--blbr)}
+.slbl{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:3px}
+.sbox.cas .slbl{color:#15803d}.sbox.ecc .slbl{color:#1d4ed8}
+.sval{font-size:20px;font-weight:700}.sbox.cas .sval{color:var(--grtx)}.sbox.ecc .sval{color:var(--bltx)}
+.ssub{font-size:10px;color:var(--muted);margin-top:2px}.sbox.cas .ssub{color:var(--grsb)}.sbox.ecc .ssub{color:var(--blsb)}
+
+/* ORDER CARDS */
+.olist{display:flex;flex-direction:column;gap:7px}
+.ocard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:11px 12px;position:relative}
+.oin{display:flex;gap:14px;align-items:flex-start}
+.oleft{flex-shrink:0;width:190px}
+.oname{font-size:14px;font-weight:700;margin-bottom:3px}
+.ometa{display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.otot{font-size:18px;font-weight:700}
+.badge{padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600}
+.badge.bar{background:var(--grbg);color:var(--grtx);border:1px solid var(--grbr)}
+.badge.ec{background:var(--blbg);color:var(--bltx);border:1px solid var(--blbr)}
+.badge.rechnung{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+.otime{font-size:10px;color:var(--muted);line-height:1.4}
+.oright{flex:1;border-left:1px solid var(--border);padding-left:12px}
+.orow{display:flex;justify-content:space-between;font-size:11px;padding:1.5px 0}
+.orow-n{color:var(--muted)}.orow-p{font-weight:500}
+.odisc{display:flex;justify-content:space-between;font-size:11px;padding:3px 0 0;border-top:1px solid var(--border);color:#16a34a;font-weight:500}
+.ochange{font-size:10px;color:var(--muted);margin-top:2px}
+.oacts{display:flex;gap:7px;align-items:flex-start}
+.icoBtn{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;transition:color .15s}
+.icoBtn:hover{color:var(--dest)}.icoBtn.edit:hover{color:var(--primary)}
+.icoBtn svg{width:14px;height:14px;display:block}
+.confOverlay{position:absolute;inset:0;background:rgba(255,255,255,.9);backdrop-filter:blur(2px);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;z-index:10}
+.confBox{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;max-width:260px;width:100%}
+.confBox h3{margin-bottom:6px;font-size:13px}.confBox p{font-size:11px;color:var(--muted);margin-bottom:10px}
+.cbtns{display:flex;gap:7px}
+.cbtn{flex:1;padding:6px;font-size:12px;border-radius:7px;cursor:pointer;border:1px solid var(--border);background:var(--card);transition:background .15s}
+.cbtn:hover{background:var(--accent)}.cbtn.danger{background:var(--dest);color:#fff;border-color:var(--dest)}.cbtn.danger:hover{opacity:.85}
+.oempty{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+
+/* COUNTDOWN BADGE */
+.cd-badge{padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.cd-badge.cd-ok{background:var(--grbg);color:var(--grtx);border:1px solid var(--grbr)}
+.cd-badge.cd-warn{background:#fefce8;color:#854d0e;border:1px solid #fde68a}
+.cd-badge.cd-exp{background:var(--rdbg);color:var(--rdtx);border:1px solid var(--rdbr)}
+
+/* NOTIZ + COUNTDOWN (Wald <-> Kasse) – rechts neben der Anmeldung */
+.onote-col{width:168px;flex-shrink:0;border-left:1px solid var(--border);padding-left:12px;display:flex;flex-direction:column;gap:6px}
+.onote-col .cd-badge{align-self:flex-start}
+.onote-lbl{font-size:9px;font-weight:600;color:var(--muted);margin-bottom:0;display:block}
+.note-input{width:100%;min-height:52px;flex:1;resize:vertical;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:var(--ibg);font-size:12px;font-family:inherit;outline:none;line-height:1.4}
+.note-input:focus{border-color:#999;box-shadow:0 0 0 2px rgba(3,2,19,.08)}
+.note-input.has-note{background:#fef9c3;border-color:#facc15}
+.note-input.has-note:focus{border-color:#eab308;box-shadow:0 0 0 2px rgba(234,179,8,.18)}
+
+/* CART PANEL */
+#rp-inner{display:flex;flex-direction:column;height:100%;padding:22px 22px 0 22px;overflow-y:auto;padding-bottom:var(--checkout-h,240px)}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-shrink:0}
+.cart-title-row{display:flex;align-items:center;gap:8px}
+.collapse-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;transition:color .15s;display:flex;align-items:center}
+.collapse-btn:hover{color:var(--text)}
+.collapse-btn svg{width:18px;height:18px}
+#ci{overflow-y:auto;max-height:35vh;flex-shrink:0}
+.cempty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px}
+.citem{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:11px;margin-bottom:9px}
+.cit{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px}
+.cin{font-size:13px;font-weight:600;margin-bottom:1px}.cia{font-size:11px;color:var(--muted)}
+.cib{display:flex;justify-content:space-between;align-items:center}
+.qrow{display:flex;align-items:center;gap:7px}
+.qbtn{width:26px;height:26px;border:1px solid var(--border);background:var(--card);border-radius:6px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .1s}
+.qbtn:hover{background:var(--accent)}
+.qin{width:44px;text-align:center;font-size:13px;font-weight:600;padding:2px 3px;border:1px solid var(--border);border-radius:5px;background:var(--ibg);outline:none;-moz-appearance:textfield}
+.qin::-webkit-outer-spin-button,.qin::-webkit-inner-spin-button{-webkit-appearance:none}
+.cpd{font-size:10px;color:var(--muted)}.cpt{font-size:13px;font-weight:600;text-align:right}
+
+/* DISC STRIP */
+.dstrip{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0}
+.dslbl{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:7px}
+.dbtns{display:flex;gap:5px}
+.dbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px;font-size:11px;border:1px solid var(--border);border-radius:7px;background:var(--card);cursor:pointer;transition:background .15s}
+.dbtn:hover{background:var(--accent)}.dbtn svg{width:12px;height:12px}
+.dlist{display:flex;flex-direction:column;gap:5px;margin-top:7px}
+.ditem{display:flex;justify-content:space-between;align-items:center;padding:6px 9px;background:var(--grbg);border:1px solid var(--grbr);border-radius:7px;font-size:11px;color:var(--grtx)}
+.ditem-amt{font-weight:600;margin-right:6px}
+.dremove{background:none;border:none;cursor:pointer;color:#15803d;transition:color .15s}.dremove:hover{color:var(--dest)}
+.dremove svg{width:12px;height:12px;display:block}
+
+/* CHECKOUT */
+.checkout{position:absolute;bottom:200px;left:0;right:0;background:var(--card);padding:14px 22px 14px 22px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.nlbl{font-size:11px;font-weight:500;color:var(--muted);display:block;margin-bottom:5px}
+.ninput{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--ibg);font-size:13px;outline:none}
+.ninput:focus{border-color:#999;box-shadow:0 0 0 2px rgba(3,2,19,.1)}
+.subrow{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px}
+.discrow{display:flex;justify-content:space-between;font-size:12px;color:#16a34a}
+.totrow{display:flex;justify-content:space-between;align-items:center;margin:8px 0 10px}
+.totlbl{font-size:15px;font-weight:600}.totval{font-size:24px;font-weight:700}
+.cctoggle{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:12px;color:var(--muted);cursor:pointer}
+.paybts{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.paybtn{padding:12px;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.paybtn:disabled{opacity:.4;cursor:not-allowed}
+.paybtn.bar{background:#16a34a;color:#fff}.paybtn.bar:not(:disabled):hover{background:#15803d}
+.paybtn.ec{background:#2563eb;color:#fff}.paybtn.ec:not(:disabled):hover{background:#1d4ed8}
+.paybtn.rechnung{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;font-size:12px;padding:8px 10px}.paybtn.rechnung:not(:disabled):hover{background:#fecaca}
+
+/* BOTTOM BAR */
+.bar-row1{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.expand-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;display:flex;align-items:center;flex-shrink:0}
+.expand-btn:hover{color:var(--text)}
+.expand-btn svg{width:20px;height:20px}
+.bar-name-area{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar-total-box{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px}
+.bar-row2{display:flex;align-items:center;gap:12px}
+.bar-cc{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer;flex-shrink:0;width:24px;margin-left:4px}
+.bar-paybts{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* MODAL */
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:22px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto}
+.modal.wide{max-width:620px}
+.modal h3{margin-bottom:14px}
+.mlbl{font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:5px}
+.minput{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:7px;background:var(--ibg);font-size:13px;outline:none}
+.minput:focus{border-color:#999;box-shadow:0 0 0 2px rgba(3,2,19,.08)}
+.mbtns{display:flex;gap:9px;margin-top:18px}
+.mbtn{flex:1;padding:9px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--card);transition:background .15s}
+.mbtn:hover{background:var(--accent)}.mbtn.primary{background:var(--primary);color:var(--pfg);border-color:var(--primary)}.mbtn.primary:hover{opacity:.9}
+.mbtn:disabled{opacity:.4;cursor:not-allowed}
+.mbtn.green{background:#16a34a;color:#fff;border-color:#16a34a}.mbtn.green:not(:disabled):hover{background:#15803d}
+.spy{display:flex;flex-direction:column;gap:12px}
+.typ-btns{display:flex;gap:7px;margin-bottom:12px}
+.typ-btn{flex:1;padding:8px 10px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:var(--card);cursor:pointer;transition:background .15s,color .15s}
+.typ-btn.active{background:var(--primary);color:var(--pfg);border-color:var(--primary)}
+.chkbox-list{max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px}
+.chkrow{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:5px;cursor:pointer;font-size:12px}
+.chkrow:hover{background:var(--accent)}
+.yc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ycbtn{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;text-align:left;transition:background .15s;width:100%}
+.ycbtn:hover{background:var(--accent)}
+.ycbtn h4{margin-bottom:3px}.ycbtn .ya{font-size:12px;color:var(--muted);margin-bottom:6px}.ycbtn .yp{font-size:20px;font-weight:700}
+/* EDIT ORDER */
+.edit-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px}
+.edit-item-info{flex:1}.edit-item-name{font-size:13px;font-weight:600}.edit-item-age{font-size:11px;color:var(--muted)}
+.edit-disc-row{display:flex;justify-content:space-between;align-items:center;padding:6px 9px;background:var(--grbg);border:1px solid var(--grbr);border-radius:7px;font-size:12px;color:var(--grtx)}
+/* WECHSELGELD */
+.wg-tot{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px}
+.wg-lbl{font-size:12px;color:var(--muted);margin-bottom:4px}
+.wg-val{font-size:26px;font-weight:700}
+.wg-ok{background:var(--grbg);border:1px solid var(--grbr);border-radius:8px;padding:14px}
+.wg-ok .wg-lbl{color:#15803d}.wg-ok .wg-val{color:var(--grtx)}
+.wg-err{background:var(--rdbg);border:1px solid var(--rdbr);border-radius:8px;padding:10px;font-size:12px;color:var(--rdtx)}
+
+/* PRINT */
+#print-area{display:none}
+@media print{
+  body *{visibility:hidden}
+  #print-area,#print-area *{visibility:visible}
+  #print-area{display:block;position:fixed;inset:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:11px;color:#111;padding:20px}
+  .pr-page{page-break-after:always}
+  .pr-page:last-child{page-break-after:avoid}
+  .pr-header{margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #111}
+  .pr-title{font-size:16px;font-weight:700;margin-bottom:2px}
+  .pr-sub{font-size:10px;color:#666}
+  .pr-info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
+  .pr-info-cell .lbl{font-size:9px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px}
+  .pr-info-cell .val{font-size:11px;font-weight:700;color:#111}
+  .pr-kasse-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
+  .pr-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+  .pr-stat{border:1px solid #e5e7eb;border-radius:5px;padding:6px 9px;display:flex;flex-direction:column}
+  .pr-stat.tot{background:#f8f8f8}.pr-stat.cas{background:#f0fdf4;border-color:#bbf7d0}.pr-stat.ecc{background:#eff6ff;border-color:#bfdbfe}
+  .pr-stat .lbl{font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px}
+  .pr-stat.cas .lbl{color:#166534}.pr-stat.ecc .lbl{color:#1d4ed8}
+  .pr-stat .val-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .pr-stat .val{font-size:14px;font-weight:700;white-space:nowrap}.pr-stat.cas .val{color:#166534}.pr-stat.ecc .val{color:#1d4ed8}
+  .pr-stat .sub{font-size:9px;color:#888;white-space:nowrap;text-align:right}.pr-stat.cas .sub{color:#16a34a}.pr-stat.ecc .sub{color:#2563eb}
+  .pr-section-lbl{font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin:8px 0 5px;border-bottom:1px solid #e5e7eb;padding-bottom:3px}
+  .pr-olist{display:flex;flex-direction:column;gap:3px}
+  .pr-ocard{border:1px solid #e5e7eb;border-radius:4px;padding:5px 7px;page-break-inside:avoid}
+  .pr-oin{display:flex;gap:9px;align-items:flex-start}
+  .pr-oleft{flex-shrink:0;width:150px}
+  .pr-oname{font-size:10px;font-weight:700;margin-bottom:2px}
+  .pr-ometa{display:flex;align-items:center;gap:5px;margin-bottom:1px}
+  .pr-otot{font-size:12px;font-weight:700}
+  .pr-badge{padding:1px 4px;border-radius:99px;font-size:8px;font-weight:600}
+  .pr-badge.bar{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+  .pr-badge.ec{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+  .pr-badge.rechnung{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+  .pr-stat.rec{background:#fff5f5;border-color:#fca5a5}
+  .pr-stat.rec .lbl{color:#dc2626}
+  .pr-stat.rec .val{color:#dc2626}
+  .pr-stat.rec .sub{color:#dc2626}
+  .pr-otime{font-size:8px;color:#999;margin-top:2px;line-height:1.4}
+  .pr-oright{flex:1;border-left:1px solid #e5e7eb;padding-left:8px}
+  .pr-orow{display:flex;justify-content:space-between;font-size:9px;padding:1px 0}
+  .pr-orow-n{color:#666}.pr-orow-p{font-weight:500}
+  .pr-odisc{display:flex;justify-content:space-between;font-size:9px;padding:2px 0 0;border-top:1px solid #e5e7eb;color:#16a34a;font-weight:500}
+  .pr-ochange{font-size:8px;color:#999;margin-top:1px}
+}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#ccc;border-radius:99px}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- KASSEN-PASSWORT-GATE -->
+<div id="kassen-gate" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.12)">
+    <div style="width:52px;height:52px;background:var(--primary);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:26px;height:26px"><path d="M12 2C8.13 2 5 5.13 5 9v2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V9c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="16" r="1.5" fill="#fff"/></svg>
+    </div>
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:6px">Kasse – Kletterwald Paderborn</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Bitte Zugangspasswort eingeben</p>
+    <input type="password" id="kassen-gate-pw" placeholder="Passwort…" autocomplete="current-password"
+      style="width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:9px;background:var(--ibg);font-size:14px;outline:none;text-align:center;letter-spacing:.08em;margin-bottom:8px"
+      oninput="checkKassenGate()" onkeydown="if(event.key==='Enter')confirmKassenGate()">
+    <div id="kassen-gate-err" style="display:none;font-size:12px;color:#dc2626;font-weight:500;margin-bottom:10px">Falsches Passwort.</div>
+    <button id="kassen-gate-btn" onclick="confirmKassenGate()" disabled
+      style="width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;opacity:.4;transition:opacity .15s">
+      Anmelden
+    </button>
+  </div>
+</div>
+<!-- LEFT PANEL -->
+<div id="lp">
+  <div id="lp-inner">
+    <div id="nav" style="flex-shrink:0">
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="nav-btn active" id="btn-kasse" onclick="setView('kasse')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          Kasse
+        </button>
+        <button class="nav-btn" id="btn-orders" onclick="setView('orders')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span id="ocnt">Anmeldungen (0)</span>
+        </button>
+        <button class="nav-btn" id="btn-mitteilungen" onclick="setView('mitteilungen')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Mitteilungen
+        </button>
+      </div>
+      <button class="nav-btn" id="btn-fullscreen" onclick="toggleFullscreen()" title="Vollbild">
+        <svg id="fs-icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        <svg id="fs-icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+        <span id="fs-label">Vollbild</span>
+      </button>
+    </div>
+
+    <!-- KASSE VIEW -->
+    <div id="kv" style="flex:1;width:100%;min-height:0;overflow-y:auto;padding-bottom:120px">
+      <h1 style="margin-bottom:16px">Kletterwald Paderborn</h1>
+      <div class="pgrid" id="g-normal"></div>
+      <div class="sec-div"><div class="sec-lbl">Ermäßigt</div><div class="pgrid" id="g-erm"></div></div>
+      <div class="sec-div"><div class="sec-lbl">Schulklassen</div><div class="pgrid" id="g-sch"></div></div>
+      <div class="sec-div">
+        <div class="sec-lbl">Jahreskarten</div>
+        <div class="pgrid">
+          <button class="pcard" onclick="openYearCards()">
+            <div class="ph"><div><div class="pn">Jahreskarten</div><div class="pa">Klicken für Auswahl</div></div>
+            <svg class="plus-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          </button>
+        </div>
+      </div>
+      <div class="sec-div">
+        <div class="sec-lbl">Kiosk</div>
+        <div class="pgrid" id="g-kiosk"></div>
+      </div>
+      <div class="sec-div">
+        <div class="sec-lbl">Sonstiges</div>
+        <div class="pgrid">
+          <button class="pcard" onclick="openCustom()">
+            <div class="ph"><div><div class="pn">Sonstiges</div><div class="pa">Gutscheine, freier Betrag</div></div>
+            <svg class="plus-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+            <div class="pp">?&nbsp;€</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDERS VIEW -->
+    <div id="ov" style="display:none;flex:1;width:100%;min-height:0;overflow-y:auto">
+      <div class="o-topbar no-print">
+        <h1>Anmeldungen</h1>
+        <div style="display:flex;align-items:center;gap:7px">
+          <button class="print-btn" onclick="openArchivLogin()" style="background:var(--card);color:var(--text);border:1px solid var(--border)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            Archiv
+          </button>
+          <button class="print-btn" onclick="kassenPrint()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            PDF / Drucken
+          </button>
+          <button class="print-btn" onclick="openSchichtBeenden()" style="background:#dc2626;color:#fff">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Schicht beenden
+          </button>
+        </div>
+      </div>
+
+      <!-- Schicht (screen) -->
+      <div class="schicht no-print">
+        <h3 style="margin-bottom:9px;font-size:14px">Schichtinformationen</h3>
+        <div class="sgrid">
+          <div><label class="flbl">Mitarbeiter</label><input class="finput" type="text" id="s-name" placeholder="Name…" oninput="syncPrint()"></div>
+          <div><label class="flbl">Datum</label><input class="finput" type="date" id="s-date" oninput="syncPrint()"></div>
+          <div><label class="flbl">Uhrzeit von</label><input class="finput" type="time" id="s-from" oninput="syncPrint()"></div>
+          <div><label class="flbl">Uhrzeit bis</label><input class="finput" type="time" id="s-to" oninput="syncPrint()"></div>
+        </div>
+      </div>
+
+      <!-- Schicht (print) -->
+      <div class="print-schicht" id="ps" style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:11px">
+          <div><span style="color:var(--muted)">Mitarbeiter: </span><span id="ps-n" style="font-weight:600">–</span></div>
+          <div><span style="color:var(--muted)">Datum: </span><span id="ps-d" style="font-weight:600">–</span></div>
+          <div><span style="color:var(--muted)">Von: </span><span id="ps-f" style="font-weight:600">–</span></div>
+          <div><span style="color:var(--muted)">Bis: </span><span id="ps-t" style="font-weight:600">–</span></div>
+        </div>
+      </div>
+
+      <!-- Kassenrechner (gedruckt UND sichtbar) -->
+      <div class="kassenr">
+        <h3 style="font-size:13px" class="no-print">Kassenrechner</h3>
+        <!-- Print-only values -->
+        <div class="kassenr-print" id="kp-vals" style="font-size:11px;margin-bottom:6px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div><span style="color:var(--muted)">Kasse Start: </span><span id="kp-s" style="font-weight:600">–</span></div>
+          <div><span style="color:var(--muted)">Kasse Ende: </span><span id="kp-e" style="font-weight:600">–</span></div>
+          <div><span style="color:var(--muted)">Betrag Umschlag: </span><span id="kp-u" style="font-weight:600">–</span></div>
+        </div>
+        <div class="kgrid no-print">
+          <div><label class="flbl">Kasse Start</label><input class="finput" type="number" step="0.01" id="k-start" placeholder="0.00" oninput="calcKasse()"></div>
+          <div><label class="flbl">Kasse Ende</label><input class="finput" type="number" step="0.01" id="k-end" placeholder="0.00" oninput="calcKasse()"></div>
+          <div><label class="flbl">Betrag in Umschlag</label><input class="finput" type="number" step="0.01" id="k-umsch" placeholder="0.00" oninput="calcKasse()"></div>
+        </div>
+        <div id="kres" style="display:none" class="kres"></div>
+      </div>
+
+      <!-- Umsatzübersicht -->
+      <div class="stats">
+        <div class="sbox tot"><div class="slbl">Gesamtumsatz</div><div class="sval" id="st-tot">0,00 €</div></div>
+        <div class="sbox cas"><div class="slbl">Baranteil</div><div class="sval" id="st-cas">0,00 €</div><div class="ssub" id="st-cn">0 Anmeldungen</div></div>
+        <div class="sbox ecc"><div class="slbl">EC-Anteil</div><div class="sval" id="st-ec">0,00 €</div><div class="ssub" id="st-en">0 Anmeldungen</div></div>
+        <div class="sbox" id="st-rec-box" style="display:none;border-color:#fca5a5;background:#fff5f5"><div class="slbl" style="color:#dc2626">Rechnung</div><div class="sval" id="st-rech" style="color:#dc2626">0,00 €</div><div class="ssub" id="st-rn" style="color:#dc2626">0 Anmeldungen</div></div>
+      </div>
+
+      <!-- Wichtige Mitteilungen + Bewertung -->
+      <div class="no-print" style="display:flex;gap:14px;margin-bottom:14px;align-items:stretch">
+        <div style="flex:1;min-width:0">
+          <label class="flbl" style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:block">⚠ Wichtige / Dringende Mitteilungen</label>
+          <div id="s-mit-box"></div>
+        </div>
+        <div style="flex:1;min-width:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);padding:12px 14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px">Hast du die Kasse gut vorgefunden?</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.4">Hat die letzte Schicht alle Gurte, Helme, Handschuhe richtig sortiert? Waren alle Gurte aufgezogen?</div>
+          <div id="rating-stars" style="display:flex;gap:4px;margin-bottom:8px"></div>
+          <textarea id="rating-text" class="note-input" placeholder="Begründung: z.B. Gurte waren nicht aufgezogen, Handschuhkästen nicht sortiert…" oninput="onRatingTextInput()"></textarea>
+        </div>
+      </div>
+
+      <!-- Orders list -->
+      <div class="olist" id="olist">
+        <div class="oempty" id="oempty">Noch keine Anmeldungen vorhanden</div>
+      </div>
+    </div>
+
+<!-- MITTEILUNGEN VIEW -->
+<div id="mv" style="display:none;flex:1;width:100%;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y">
+  <div class="o-topbar no-print" style="margin-bottom:12px;width:100%;max-width:860px">
+    <h1>Mitteilungen</h1>
+  </div>
+  <div id="mit-list" style="width:100%;max-width:860px"></div>
+</div>
+
+<!-- ARCHIV VIEW -->
+<div id="av" style="display:none;flex:1;width:100%;min-height:0;overflow-y:auto">
+  <div class="o-topbar no-print" style="margin-bottom:12px;width:100%;max-width:860px">
+    <h1>Archiv</h1>
+    <div style="display:flex;gap:8px">
+
+      <button onclick="openArchivLoeschen()" style="display:flex;align-items:center;gap:6px;padding:7px 13px;background:#dc2626;color:#fff;border:none;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Archiv löschen
+      </button>
+    </div>
+  </div>
+  <div class="olist" id="alist" style="align-items:stretch;width:100%;max-width:860px">
+    <div class="oempty">Noch keine archivierten Schichten vorhanden</div>
+  </div>
+</div>
+
+<!-- ARCHIV LOESCHEN MODAL -->
+<div class="moverlay" id="m-archiv-loeschen" style="display:none" onclick="if(event.target===this)closeM('m-archiv-loeschen')">
+  <div class="modal" style="max-width:400px">
+    <h3 style="margin-bottom:10px">Archiv löschen?</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Alle archivierten Schichten werden unwiderruflich gelöscht. Die aktuelle Session und Anmeldungen bleiben unberührt.</p>
+    <div class="mbtns">
+      <button class="mbtn" onclick="closeM('m-archiv-loeschen')">Abbrechen</button>
+      <button class="mbtn" id="al-del-btn" onclick="confirmArchivLoeschen()" style="background:#dc2626;color:#fff;border-color:#dc2626">Alles löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORT AENDERN MODAL -->
+<div class="moverlay" id="m-change-pw" style="display:none" onclick="if(event.target===this)closeM('m-change-pw')">
+  <div class="modal" style="max-width:380px">
+    <h3 style="margin-bottom:10px">Passwort ändern</h3>
+    <div class="spy">
+      <div>
+        <label class="mlbl">Aktuelles Passwort</label>
+        <input class="minput" type="password" id="cp-old" placeholder="Aktuelles Passwort…" oninput="checkCpOld()">
+        <div id="cp-old-err" style="display:none;margin-top:5px;font-size:12px;color:#dc2626;font-weight:500">Falsches Passwort.</div>
+      </div>
+      <div id="cp-new-section" style="display:none">
+        <label class="mlbl">Neues Passwort</label>
+        <input class="minput" type="password" id="cp-new" placeholder="Neues Passwort…" oninput="checkCpNew()">
+        <label class="mlbl" style="margin-top:10px">Neues Passwort bestätigen</label>
+        <input class="minput" type="password" id="cp-new2" placeholder="Wiederholen…" oninput="checkCpNew()">
+        <div id="cp-new-err" style="display:none;margin-top:5px;font-size:12px;color:#dc2626;font-weight:500">Passwörter stimmen nicht überein.</div>
+      </div>
+    </div>
+    <div class="mbtns" style="margin-top:16px">
+      <button class="mbtn" onclick="closeM('m-change-pw')">Abbrechen</button>
+      <button class="mbtn primary" id="cp-save-btn" disabled onclick="saveNewPw()" style="opacity:.4;cursor:not-allowed">Speichern</button>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- SCHICHT BEENDEN MODAL -->
+<div class="moverlay" id="m-schicht-beenden" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <h3 style="margin-bottom:10px">Schicht beenden?</h3>
+    <div id="sb-warnings" style="display:none;margin-bottom:14px;display:flex;flex-direction:column;gap:7px"></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:0" id="sb-ready-msg"></p>
+    <div class="mbtns" style="margin-top:16px">
+      <button class="mbtn" onclick="closeM('m-schicht-beenden')">Abbrechen</button>
+      <button class="mbtn" id="sb-confirm-btn" onclick="confirmSchichtBeenden()" style="background:#dc2626;color:#fff;border-color:#dc2626">Schicht beenden</button>
+    </div>
+  </div>
+</div>
+
+<!-- HINWEIS: VOLLBILDMODUS VERLASSEN -->
+<div class="moverlay" id="m-vollbild-hinweis" style="display:none">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <div style="font-size:16px;line-height:1.55">Belasse diese Seite <b>nicht im Vollbildmodus</b>. Die nächste Schicht kann den Vollbildmodus wieder aktivieren.</div>
+    <div class="mbtns" style="margin-top:20px">
+      <button class="mbtn primary" onclick="closeM('m-vollbild-hinweis')">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHIV LOGIN MODAL -->
+<div class="moverlay" id="m-archiv-login" style="display:none">
+  <div class="modal" style="max-width:360px">
+    <h3 style="margin-bottom:6px">Archiv</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Bitte Passwort eingeben um das Archiv zu öffnen:</p>
+    <label class="mlbl">Passwort</label>
+    <input class="minput" type="password" id="al-pw" placeholder="Passwort eingeben…" oninput="checkAlPw()" onkeydown="if(event.key==='Enter')confirmArchivLogin()">
+    <div id="al-err" style="display:none;margin-top:8px;font-size:12px;color:#dc2626;font-weight:500">Falsches Passwort.</div>
+    <div class="mbtns">
+      <button class="mbtn" onclick="closeM('m-archiv-login');document.getElementById('al-pw').value='';document.getElementById('al-err').style.display='none'">Abbrechen</button>
+      <button class="mbtn primary" id="al-confirm-btn" disabled onclick="confirmArchivLogin()" style="opacity:.4;cursor:not-allowed">Öffnen</button>
+    </div>
+  </div>
+</div>
+
+<!-- MITTEILUNG HINZUFÜGEN -->
+<div class="moverlay" id="m-mit-add" style="display:none" onclick="if(event.target===this)closeM('m-mit-add')">
+  <div class="modal" style="max-width:420px">
+    <h3 style="margin-bottom:10px">Mitteilung hinzufügen</h3>
+    <textarea id="mit-add-text" rows="4" placeholder="Etwas im Park ist kaputt, Getränke leer, Handschuhe leer, Gurte zur Reinigung?" style="width:100%;padding:9px 11px;border:1px solid #fca5a5;border-radius:var(--radius);background:#fff5f5;font-size:13px;resize:vertical;outline:none;font-family:inherit;color:var(--text)"></textarea>
+    <div class="mbtns" style="margin-top:14px">
+      <button class="mbtn" onclick="closeM('m-mit-add')">Abbrechen</button>
+      <button class="mbtn" onclick="sendMitAdd()" style="background:#dc2626;color:#fff;border-color:#dc2626">Senden</button>
+    </div>
+  </div>
+</div>
+
+<!-- MITTEILUNG: NAME ABFRAGEN -->
+<div class="moverlay" id="m-mit-name" style="display:none" onclick="if(event.target===this)closeM('m-mit-name')">
+  <div class="modal" style="max-width:360px">
+    <h3 style="margin-bottom:10px;font-size:15px">Wie ist dein Name?</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Damit das Team weiß, von wem die Nachricht stammt.</p>
+    <input class="finput" type="text" id="mit-name-input" placeholder="Name…" style="margin-bottom:14px" onkeydown="if(event.key==='Enter')confirmMitName()">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeM('m-mit-name')" style="padding:8px 14px;background:var(--accent);border:none;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer">Abbrechen</button>
+      <button onclick="confirmMitName()" style="padding:8px 14px;background:var(--primary);color:var(--pfg);border:none;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer">Weiter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHIV DETAIL MODAL -->
+<div class="moverlay" id="m-archiv-detail" style="display:none">
+  <div class="modal wide" style="max-width:780px;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 id="ad-title">Schichtdetails</h3>
+      <button class="icoBtn" onclick="closeM('m-archiv-detail')" style="color:var(--muted)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <!-- Schicht info -->
+    <div id="ad-schicht" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px"></div>
+    <!-- Kasse info -->
+    <div id="ad-kasse" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px"></div>
+    <!-- Bemerkungen / Mitteilungen -->
+    <div id="ad-notizen" style="margin-bottom:12px"></div>
+    <!-- Stats -->
+    <div class="stats" id="ad-stats" style="margin-bottom:12px"></div>
+    <!-- Orders -->
+    <div class="olist" id="ad-orders"></div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL (cart expanded) -->
+<div id="rp">
+  <div id="rp-inner">
+    <div class="ch">
+      <div class="cart-title-row">
+        <button class="collapse-btn" onclick="collapseCart()" title="Warenkorb einklappen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <h2>Warenkorb</h2>
+      </div>
+      <button class="icoBtn" id="clr-btn" onclick="clearCart()" style="display:none" title="Leeren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+    </div>
+    <div id="ci"><div class="cempty" id="cempty">Keine Artikel im Warenkorb</div></div>
+    <!-- Discount strip -->
+    <div class="dstrip" id="dstrip" style="display:none">
+      <div class="dslbl">Einlösen</div>
+      <div class="dbtns">
+        <button class="dbtn" onclick="openVoucher()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          Gutschein
+        </button>
+        <button class="dbtn" onclick="openFreecard()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          Freikarte
+        </button>
+      </div>
+      <div class="dlist" id="dlist"></div>
+    </div>
+    <!-- Checkout -->
+    <div class="checkout">
+      <label class="nlbl">Name</label>
+      <input class="ninput" type="text" id="cname" placeholder="Name eingeben…" oninput="updPayBtns()">
+      <div id="subrow" class="subrow" style="display:none"><span>Zwischensumme</span><span id="subval"></span></div>
+      <div id="discrow" class="discrow" style="display:none"><span>Rabatte gesamt</span><span id="discval"></span></div>
+      <div class="totrow"><span class="totlbl">Gesamtsumme</span><span class="totval" id="totdisp">0,00 €</span></div>
+      <label class="cctoggle">
+        <input type="checkbox" id="cc-toggle" onchange="updPayBtns()">
+        Wechselgeldrechner aktivieren
+      </label>
+      <div class="paybts">
+        <button class="paybtn bar" id="pay-bar" disabled onclick="completeOrder('bar')">Bar</button>
+        <button class="paybtn ec" id="pay-ec" disabled onclick="completeOrder('ec')">EC</button>
+      </div>
+      <div style="margin-top:6px">
+        <button class="paybtn rechnung" id="pay-rechnung" disabled onclick="completeOrder('rechnung')" style="width:100%">📄 Auf Rechnung</button>
+        <div id="rechnung-cache-hint" style="display:none;margin-top:6px;padding:6px 9px;background:#fef9c3;border:1px solid #facc15;border-radius:7px;font-size:10px;color:#854d0e;align-items:center;justify-content:space-between;gap:6px">
+          <span>📄 Rechnungsadresse zwischengespeichert</span>
+          <button onclick="discardRechnungCache()" title="Verwerfen" style="border:none;background:none;color:#854d0e;cursor:pointer;font-weight:700;font-size:12px;line-height:1">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR (cart collapsed) -->
+<div id="cart-bar">
+  <div class="bar-row1">
+    <button class="expand-btn" onclick="expandCart()" title="Warenkorb einblenden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>
+    <div class="bar-name-area">
+      <input class="ninput" type="text" id="bar-cname" placeholder="Name eingeben…" oninput="syncBarName()">
+      <div class="bar-total-box">
+        <span style="font-size:12px;color:var(--muted)">Gesamt:</span>
+        <span style="font-size:16px;font-weight:600" id="bar-total">0,00 €</span>
+      </div>
+    </div>
+  </div>
+  <div class="bar-row2">
+    <div class="bar-cc" style="width:auto">
+      <input type="checkbox" id="bar-cc-toggle" onchange="syncCC()" style="width:14px;height:14px">
+      <label for="bar-cc-toggle" style="font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap">Wechselgeld</label>
+    </div>
+    <div class="bar-paybts">
+      <button class="paybtn bar" id="bar-pay-bar" disabled onclick="completeOrder('bar')" style="padding:10px">Bar</button>
+      <button class="paybtn ec" id="bar-pay-ec" disabled onclick="completeOrder('ec')" style="padding:10px">EC</button>
+      <button class="paybtn rechnung" id="bar-pay-rechnung" disabled onclick="completeOrder('rechnung')" style="padding:7px;font-size:11px">📄 Rechnung</button>
+    </div>
+  </div>
+  <div id="bar-rechnung-cache-hint" style="display:none;margin-top:8px;padding:5px 9px;background:#fef9c3;border:1px solid #facc15;border-radius:7px;font-size:10px;color:#854d0e;align-items:center;justify-content:space-between;gap:6px;width:100%">
+    <span>📄 Rechnungsadresse zwischengespeichert</span>
+    <button onclick="discardRechnungCache()" title="Verwerfen" style="border:none;background:none;color:#854d0e;cursor:pointer;font-weight:700;font-size:12px;line-height:1">✕</button>
+  </div>
+</div>
+</div>
+
+<!-- MODALS -->
+<!-- Rechnungsadresse Modal -->
+<div class="moverlay" id="m-rechnung" style="display:none" onclick="if(event.target===this)closeM('m-rechnung')">
+  <div class="modal" style="max-width:400px">
+    <h3 style="margin-bottom:10px">📄 Rechnungsadresse</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Bitte die vollständige Rechnungsadresse eingeben:</p>
+    <textarea id="rechnung-adresse" rows="5" placeholder="Name / Firma&#10;Straße und Hausnummer&#10;PLZ und Ort" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--ibg);font-size:13px;resize:vertical;outline:none;font-family:inherit;color:var(--text);margin-bottom:6px" oninput="onRechnungAdresseInput()"></textarea>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:12px">Die Eingabe wird automatisch zwischengespeichert – du kannst das Fenster schließen, die Anmeldung weiter bearbeiten und später hier fortfahren.</div>
+    <div class="mbtns" style="flex-wrap:wrap">
+      <button class="mbtn" onclick="discardRechnungCache();closeM('m-rechnung')" style="color:var(--dest);font-size:12px;flex:0 1 auto;padding:9px 10px" title="Zwischengespeicherte Adresse verwerfen und Fenster schließen">Verwerfen</button>
+      <button class="mbtn" onclick="closeM('m-rechnung')" style="font-size:12px;flex:1 1 auto" title="Fenster schließen, Adresse bleibt zwischengespeichert">Speichern</button>
+      <button class="mbtn" id="rechnung-confirm-btn" onclick="confirmRechnung()" style="background:#dc2626;color:#fff;border-color:#dc2626;flex:1 1 100%;margin-top:2px">Auf Rechnung buchen</button>
+    </div>
+  </div>
+</div>
+<div class="moverlay" id="m-custom" style="display:none" onclick="if(event.target===this)closeM('m-custom')">
+  <div class="modal">
+    <h3>Sonstiges hinzufügen</h3>
+    <div class="spy">
+      <div><label class="mlbl">Grund</label><input class="minput" type="text" id="mc-reason" placeholder="z.B. Gutschein, sonstiger Betrag…" onkeydown="if(event.key==='Enter')addCustom()"></div>
+      <div><label class="mlbl">Betrag (€)</label><input class="minput" type="number" step="0.01" id="mc-price" placeholder="0.00" onkeydown="if(event.key==='Enter')addCustom()"></div>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn" onclick="closeM('m-custom')">Abbrechen</button>
+      <button class="mbtn primary" onclick="addCustom()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay" id="m-voucher" style="display:none" onclick="if(event.target===this)closeM('m-voucher')">
+  <div class="modal">
+    <h3>Gutschein einlösen</h3>
+    <div class="typ-btns">
+      <button class="typ-btn active" id="vt-fixed" onclick="setVType('fixed')">Fester Betrag</button>
+      <button class="typ-btn" id="vt-pct" onclick="setVType('percent')">Prozent-Rabatt</button>
+    </div>
+    <div id="v-fixed">
+      <label class="mlbl">Gutscheinwert (€)</label>
+      <input class="minput" type="number" step="0.01" min="0" id="mv-amount" placeholder="0.00" onkeydown="if(event.key==='Enter')applyVoucher()">
+    </div>
+    <div id="v-pct" style="display:none">
+      <div class="spy">
+        <div><label class="mlbl">Rabatt in %</label><input class="minput" type="number" step="1" min="0" max="100" id="mv-pct" placeholder="0"></div>
+        <div><label class="mlbl">Auf welche Artikel anwenden?</label><div class="chkbox-list" id="v-items"></div></div>
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn" onclick="closeM('m-voucher')">Abbrechen</button>
+      <button class="mbtn primary" onclick="applyVoucher()">Einlösen</button>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay" id="m-fc" style="display:none" onclick="if(event.target===this)closeM('m-fc')">
+  <div class="modal">
+    <h3>Freikarte / Jahreskarte einlösen</h3>
+    <div class="spy">
+      <div>
+        <label class="mlbl">Artikel aus Warenkorb wählen</label>
+        <select class="minput" id="fc-item" onchange="updFcMax()"><option value="">Bitte wählen…</option></select>
+      </div>
+      <div id="fc-qty-row" style="display:none">
+        <label class="mlbl">Anzahl Freikarten</label>
+        <input class="minput" type="number" min="1" id="fc-qty" value="1">
+        <p id="fc-hint" style="font-size:10px;color:var(--muted);margin-top:3px"></p>
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn" onclick="closeM('m-fc')">Abbrechen</button>
+      <button class="mbtn primary" id="fc-apply" onclick="applyFreecard()" disabled>Einlösen</button>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay" id="m-yc" style="display:none" onclick="if(event.target===this)closeM('m-yc')">
+  <div class="modal">
+    <h3>Jahreskarten auswählen</h3>
+    <div class="yc-grid" id="yc-grid"></div>
+    <div class="mbtns"><button class="mbtn" onclick="closeM('m-yc')">Schließen</button></div>
+  </div>
+</div>
+
+<div class="moverlay" id="m-wg" style="display:none" onclick="if(event.target===this)closeM('m-wg')">
+  <div class="modal">
+    <h3>Wechselgeldrechner</h3>
+    <div class="spy">
+      <div class="wg-tot"><div class="wg-lbl">Gesamtsumme</div><div class="wg-val" id="wg-tot-val"></div></div>
+      <div><label class="mlbl">Erhaltener Betrag (€)</label><input class="minput" type="number" step="0.01" id="wg-input" placeholder="0.00" oninput="calcWg()"></div>
+      <div id="wg-result"></div>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn" onclick="closeM('m-wg')">Abbrechen</button>
+      <button class="mbtn green" id="wg-confirm" onclick="completeWithChange()" disabled>Anmeldung abschließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay" id="m-edit" style="display:none" onclick="if(event.target===this)cancelEdit()">
+  <div class="modal wide">
+    <h3>Anmeldung bearbeiten</h3>
+    <div class="spy">
+      <div><label class="mlbl">Name</label><input class="minput" type="text" id="ed-name"></div>
+      <div>
+        <label class="mlbl">Zahlungsart</label>
+        <div style="display:flex;gap:8px">
+          <button class="typ-btn" id="ed-bar" onclick="setEdPay('bar')">Bar</button>
+          <button class="typ-btn" id="ed-ec" onclick="setEdPay('ec')">EC</button>
+        </div>
+      </div>
+      <div>
+        <label class="mlbl">Preiskategorie hinzufügen</label>
+        <select class="minput" id="ed-addcat" onchange="edAddCat()"><option value="">Preiskategorie wählen…</option></select>
+      </div>
+      <div>
+        <label class="mlbl">Artikel</label>
+        <div id="ed-items" class="spy"></div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+          <label class="mlbl" style="margin-bottom:0">Rabatte</label>
+          <button style="display:flex;align-items:center;gap:4px;padding:5px 9px;font-size:11px;border:1px solid var(--border);border-radius:7px;background:var(--card);cursor:pointer" onclick="toggleEdVoucher()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Gutschein hinzufügen
+          </button>
+        </div>
+        <div id="ed-voucher-section" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px;margin-bottom:9px">
+          <div class="typ-btns">
+            <button class="typ-btn active" id="edvt-fixed" onclick="setEdVType('fixed')">Fester Betrag</button>
+            <button class="typ-btn" id="edvt-pct" onclick="setEdVType('percent')">Prozent-Rabatt</button>
+          </div>
+          <div id="edv-fixed">
+            <label class="mlbl">Gutscheinwert (€)</label>
+            <input class="minput" type="number" step="0.01" min="0" id="edv-amt" placeholder="0.00">
+          </div>
+          <div id="edv-pct" style="display:none">
+            <div class="spy">
+              <div><label class="mlbl">Rabatt in %</label><input class="minput" type="number" step="1" min="0" max="100" id="edv-pctval" placeholder="0"></div>
+              <div><label class="mlbl">Auf welche Artikel?</label><div class="chkbox-list" id="edv-items"></div></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px;margin-top:10px">
+            <button class="mbtn" onclick="cancelEdVoucher()" style="flex:1;padding:7px;font-size:12px">Abbrechen</button>
+            <button class="mbtn primary" onclick="applyEdVoucher()" style="flex:1;padding:7px;font-size:12px">Hinzufügen</button>
+          </div>
+        </div>
+        <div id="ed-discounts" class="spy"></div>
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn" onclick="cancelEdit()">Abbrechen</button>
+      <button class="mbtn primary" onclick="saveEdit()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+
+<script type="module">
+//Firebase Connect Datas
+	import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+	import {
+	getFirestore,
+	collection,
+	addDoc,
+	getDocs,
+	deleteDoc,
+	doc,
+	setDoc,
+	onSnapshot,
+	arrayUnion
+	} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+	const firebaseConfig = {
+	apiKey: "AIzaSyANABs6v38UkBo_CXR_qt_KsY_1yCVr5VQ",
+	authDomain: "anmeldungensyncer.firebaseapp.com",
+	projectId: "anmeldungensyncer",
+	storageBucket: "anmeldungensyncer.firebasestorage.app",
+	messagingSenderId: "444676738503",
+	appId: "1:444676738503:web:2e0ba915c55c5305b71de2",
+	measurementId: "G-NZ80P58Y12"
+	};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+	window.db = db;
+	window.fbCollection = collection;
+	window.fbAddDoc = addDoc;
+	window.fbGetDocs = getDocs;
+	window.fbDeleteDoc = deleteDoc;
+	window.fbDoc = doc;
+	window.fbSetDoc = setDoc;
+	window.fbOnSnapshot = onSnapshot;
+	window.fbArrayUnion = arrayUnion;
+	window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────
+const CATS={
+  normal:[
+    {id:'adults',     name:'Erwachsene',          age:'18+',                      price:28},
+    {id:'youth',      name:'Jugendliche',          age:'12–17 Jahre',              price:26},
+    {id:'children',   name:'Kinder',               age:'6–11 Jahre',               price:24},
+    {id:'young',      name:'Kinder',               age:'4–5 Jahre',                price:19},
+    {id:'dwarf',      name:'Zwergenticket',         age:'1 Erw. + 1 Kind 4–5 J.',  price:38},
+  ],
+  erm:[
+    {id:'adults-r',   name:'Erwachsene Ermäßigt',  age:'18+',                      price:26},
+    {id:'youth-r',    name:'Jugendliche Ermäßigt', age:'12–17 Jahre',              price:24},
+    {id:'children-r', name:'Kinder Ermäßigt',      age:'6–11 Jahre',               price:22},
+    {id:'young-r',    name:'Kinder Ermäßigt',      age:'4–5 Jahre',                price:17},
+  ],
+  sch:[
+    {id:'sch46',  name:'Schulklasse', age:'Schüler 4.–6. Klasse',  price:19},
+    {id:'sch713', name:'Schulklasse', age:'Schüler 7.–13. Klasse', price:20},
+  ],
+  kiosk:[
+    {id:'kiosk-wasser',    name:'Wasser',    age:'0,33 L',  price:3.00},
+    {id:'kiosk-softdrink', name:'Softdrink', age:'0,33 L', price:3.50},
+    {id:'kiosk-corny',     name:'Corny',     age:'Riegel', price:1.50},
+  ],
+};
+const YEAR_CARDS=[
+  {id:'yc45',    name:'Jahreskarte', age:'4–5 Jahre',                        price:110},
+  {id:'yc611',   name:'Jahreskarte', age:'6–11 Jahre',                       price:130},
+  {id:'yc1217',  name:'Jahreskarte', age:'12–17 J. / Schüler / Studenten',   price:140},
+  {id:'ycadult', name:'Jahreskarte', age:'Erwachsene',                       price:150},
+];
+const ALL_CATS=[...CATS.normal,...CATS.erm,...CATS.sch,...CATS.kiosk,...YEAR_CARDS];
+const YEAR_CARD_IDS=YEAR_CARDS.map(c=>c.id);
+
+// Kletterperson = alles außer Kiosk-Artikel, Jahreskarten und "Sonstiges" (Gutschein/freier Betrag).
+// Solche Positionen bekommen in der Wald-Übersicht keinen Eintrag und in der Kasse
+// weder Notizfeld noch Countdown-Timer.
+function isClimberItem(it){
+  if(!it) return false;
+  if(it.type==='custom') return false;
+  if(it.id && it.id.indexOf('kiosk-')===0) return false;
+  if(it.id && YEAR_CARD_IDS.indexOf(it.id)>=0) return false;
+  return true;
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let cart=[], discounts=[], orders=[], shifts=[], mitteilungen=[];
+let pendingRechnungAdresse=''; // Zwischenspeicher: Rechnungsadresse bleibt erhalten, auch wenn das PopUp verlassen wird
+let shiftMitIds=[], currentRating=0, currentRatingText='';
+let archivPw='KassenMaster!'; // wird aus Firestore geladen
+let notizen={}; // orderId -> Notiztext (temporär, Kasse <-> Wald)
+let notizTimers={};
+
+//Firebase sync – onSnapshot feuert sofort beim Start (initialer Load) und bei jeder Änderung
+function startRealtimeSync(){
+  // Anmeldungen sync
+  window.fbOnSnapshot(
+    window.fbCollection(window.db,"orders"),
+    snapshot => {
+      orders = [];
+      snapshot.forEach(d=>{
+        orders.push({
+          firestoreId:d.id,
+          ...d.data(),
+          ts:d.data().ts ? (d.data().ts.toDate ? d.data().ts.toDate() : new Date(d.data().ts)) : new Date()
+        });
+      });
+      orders.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+      updOrderCnt();
+      renderOrders();
+    }
+  );
+  // Archiv sync
+  window.fbOnSnapshot(
+    window.fbCollection(window.db,"shifts"),
+    snapshot => {
+      shifts = [];
+      snapshot.forEach(d=>{
+        shifts.push({firestoreId:d.id,...d.data()});
+      });
+      shifts.sort((a,b)=>new Date(b.archivedAt||0)-new Date(a.archivedAt||0));
+      if(view==='archiv')renderArchiv();
+    }
+  );
+  // Archiv-Passwort sync
+  window.fbOnSnapshot(
+    window.fbDoc(window.db,"config","archiv"),
+    snap => {
+      if(snap.exists()&&snap.data().pw){
+        archivPw=snap.data().pw;
+      }
+    }
+  );
+  // Kassen-Passwort sync
+  window.fbOnSnapshot(
+    window.fbDoc(window.db,"config","kassenpw"),
+    snap => {
+      if(snap.exists()&&snap.data().pw) kassenPw=snap.data().pw;
+    }
+  );
+  // Mitteilungen sync
+  window.fbOnSnapshot(
+    window.fbCollection(window.db,"mitteilungen"),
+    snapshot => {
+      mitteilungen = [];
+      snapshot.forEach(d=>{
+        mitteilungen.push({firestoreId:d.id,...d.data()});
+      });
+      if(view==='mitteilungen')renderMitteilungen();
+      renderShiftMitBox();
+    }
+  );
+  // Schicht & Kasse sync
+  window.fbOnSnapshot(
+    window.fbDoc(window.db,"session","current"),
+    snap => {
+      if(!snap.exists())return;
+      const d=snap.data();
+      // Felder nur setzen wenn nicht gerade selbst getippt wird
+      const active=document.activeElement;
+      const fields={
+        's-name':d.sName||'','s-date':d.sDate||'',
+        's-from':d.sFrom||'','s-to':d.sTo||'',
+        'k-start':d.kStart||'','k-end':d.kEnd||'','k-umsch':d.kUmsch||''
+      };
+      Object.entries(fields).forEach(([id,val])=>{
+        const el=document.getElementById(id);
+        if(el&&el!==active)el.value=val;
+      });
+      shiftMitIds=d.shiftMitIds||[];
+      currentRating=d.rating||0;
+      currentRatingText=d.ratingText||'';
+      renderShiftMitBox();
+      renderStars(currentRating);
+      const rtEl=document.getElementById('rating-text');
+      if(rtEl&&rtEl!==active)rtEl.value=currentRatingText;
+      syncPrint(false);
+      calcKasse(false);
+    }
+  );
+}
+
+// ── NOTIZEN (Kasse <-> Wald) ──────────────────────────────────────────
+// Temporäre Notizen pro Anmeldung, eigene Collection (nicht Teil von "orders",
+// damit sie NICHT mit ins Archiv wandern). Werden automatisch bereinigt,
+// sobald die zugehörige Anmeldung älter als ~20 Std. ist (= nach dem Tag).
+function startNotizenSync(){
+  window.fbOnSnapshot(
+    window.fbCollection(window.db,"notizen"),
+    snapshot=>{
+      const map={};
+      const now=Date.now();
+      snapshot.forEach(d=>{
+        const data=d.data();
+        map[d.id]=data.text||'';
+        const t=data.ts?new Date(data.ts).getTime():null;
+        if(t && (now-t)>20*60*60*1000){
+          window.fbDeleteDoc(window.fbDoc(window.db,"notizen",d.id)).catch(()=>{});
+        }
+      });
+      notizen=map;
+      applyNotizenToDom();
+    }
+  );
+}
+// Aktualisiert Textareas im DOM, ohne den Fokus eines gerade tippenden
+// Nutzers zu stören (analog zum Schicht-Felder-Sync).
+function applyNotizenToDom(){
+  Object.keys(notizen).forEach(id=>{
+    const el=document.getElementById('note-'+id);
+    if(!el)return;
+    if(el!==document.activeElement && el.value!==notizen[id]) el.value=notizen[id];
+    el.classList.toggle('has-note',(notizen[id]||'').trim().length>0);
+  });
+}
+function onNoteInput(orderId,tsIso){
+  const el=document.getElementById('note-'+orderId);
+  if(!el)return;
+  const val=el.value;
+  notizen[orderId]=val;
+  el.classList.toggle('has-note',val.trim().length>0);
+  clearTimeout(notizTimers[orderId]);
+  notizTimers[orderId]=setTimeout(()=>{
+    window.fbSetDoc(window.fbDoc(window.db,'notizen',orderId),{text:val,ts:tsIso,updatedAt:new Date().toISOString()});
+  },500);
+}
+
+// ── COUNTDOWN (2,5 Std. ab Anmeldezeitpunkt) ──────────────────────────
+function countdownInfo(tsVal){
+  const start=new Date(tsVal).getTime();
+  const totalMs=2.5*60*60*1000;
+  const remainMs=totalMs-(Date.now()-start);
+  const absMin=Math.floor(Math.abs(remainMs)/60000);
+  const h=Math.floor(absMin/60), m=absMin%60;
+  const txt=(remainMs<0?'-':'')+h+':'+String(m).padStart(2,'0');
+  let cls='cd-ok';
+  if(remainMs<=0) cls='cd-exp';
+  else if(remainMs<=15*60000) cls='cd-warn';
+  return {txt,cls};
+}
+function updateCountdowns(){
+  orders.forEach(o=>{
+    const el=document.getElementById('cd-'+o.id);
+    if(!el)return;
+    const info=countdownInfo(o.ts);
+    el.textContent=info.txt;
+    el.className='cd-badge no-print '+info.cls;
+  });
+}
+setInterval(updateCountdowns,15000);
+
+// Schicht/Kasse-Felder nach Firestore speichern (debounced)
+let _sessionTimer=null;
+function saveSession(){
+  clearTimeout(_sessionTimer);
+  _sessionTimer=setTimeout(()=>{
+    window.fbSetDoc(window.fbDoc(window.db,"session","current"),{
+      sName:document.getElementById('s-name').value,
+      sDate:document.getElementById('s-date').value,
+      sFrom:document.getElementById('s-from').value,
+      sTo:document.getElementById('s-to').value,
+      kStart:document.getElementById('k-start').value,
+      kEnd:document.getElementById('k-end').value,
+      kUmsch:document.getElementById('k-umsch').value,
+    },{merge:true});
+  },600);
+}
+function syncSession(){saveSession();}
+//Firebase Ende
+
+// ── MITTEILUNGEN (Forum) ─────────────────────────────────────────────
+let _mitPendingSend=null;
+// Offene Mitteilungen zuerst (neueste zuerst), abgeschlossene danach (neueste zuerst)
+function mitRoots(){
+  const all=mitteilungen.filter(m=>!m.parentId);
+  const open=all.filter(m=>!m.done).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const done=all.filter(m=>m.done).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  return [...open,...done];
+}
+function mitReplies(rootId){return mitteilungen.filter(m=>m.parentId===rootId).sort((a,b)=>new Date(a.ts)-new Date(b.ts));}
+
+function renderMitteilungen(){
+  const list=document.getElementById('mit-list');
+  if(!list)return;
+  const roots=mitRoots();
+  if(roots.length===0){
+    list.innerHTML='<div class="oempty">Noch keine Mitteilungen vorhanden</div>';
+    return;
+  }
+  list.innerHTML=roots.map(r=>{
+    const replies=mitReplies(r.firestoreId);
+    const done=!!r.done;
+    return `<div style="background:${done?'var(--card)':'#fff5f5'};border:1px solid ${done?'var(--border)':'#fca5a5'};border-radius:var(--radius);margin-bottom:12px;overflow:hidden${done?';opacity:.55':''}">
+      ${done?`<div style="padding:5px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">✓ Abgeschlossen</div>`:''}
+      <div style="padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px">
+          <span style="font-size:12px;font-weight:700;color:${done?'var(--text)':'#991b1b'}">${esc(r.author||'Unbekannt')}</span>
+          <span style="font-size:10px;color:${done?'var(--muted)':'#dc2626'};white-space:nowrap">${fmtTs(r.ts)}</span>
+        </div>
+        <div style="font-size:13px;white-space:pre-wrap;color:${done?'var(--text)':'#991b1b'}">${esc(r.text)}</div>
+      </div>
+      ${replies.length?`<div style="border-top:1px solid var(--border);background:#f3f4f6">${replies.map(rp=>`
+        <div style="padding:9px 14px 9px 26px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;gap:8px">
+            <span style="font-size:11px;font-weight:700;color:#4b5563">${esc(rp.author||'Unbekannt')}</span>
+            <span style="font-size:10px;color:#6b7280;white-space:nowrap">${fmtTs(rp.ts)}</span>
+          </div>
+          <div style="font-size:12px;white-space:pre-wrap;color:#4b5563">${esc(rp.text)}</div>
+        </div>`).join('')}</div>`:''}
+      <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:8px">
+        <input type="text" id="mit-reply-${r.firestoreId}" placeholder="Antworten…" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--ibg);font-size:12px;outline:none;font-family:inherit" onkeydown="if(event.key==='Enter'){event.preventDefault();sendMitteilungReply('${r.firestoreId}')}">
+        <button onclick="sendMitteilungReply('${r.firestoreId}')" style="padding:7px 12px;background:var(--accent);border:none;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">Antworten</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getMitAuthor(cb){
+  // Fragt jedes Mal nach dem Namen – bewusst nicht an den Namen der aktuellen Schicht gekoppelt.
+  _mitPendingSend=cb;
+  document.getElementById('mit-name-input').value='';
+  document.getElementById('m-mit-name').style.display='flex';
+  setTimeout(()=>document.getElementById('mit-name-input').focus(),50);
+}
+function confirmMitName(){
+  const v=document.getElementById('mit-name-input').value.trim();
+  if(!v)return;
+  closeM('m-mit-name');
+  if(_mitPendingSend){const cb=_mitPendingSend;_mitPendingSend=null;cb(v);}
+}
+
+async function sendMitteilungReply(rootId){
+  const inp=document.getElementById('mit-reply-'+rootId);
+  const text=inp.value.trim();
+  if(!text)return;
+  getMitAuthor(async(author)=>{
+    await window.fbAddDoc(window.fbCollection(window.db,'mitteilungen'),{
+      text,author,ts:new Date().toISOString(),parentId:rootId,done:false
+    });
+    inp.value='';
+  });
+}
+async function markMitDone(id){
+  await window.fbSetDoc(window.fbDoc(window.db,'mitteilungen',id),{done:true},{merge:true});
+}
+async function undoMitDone(id){
+  await window.fbSetDoc(window.fbDoc(window.db,'mitteilungen',id),{done:false},{merge:true});
+}
+async function deleteMitThread(id){
+  const toDelete=[id,...mitteilungen.filter(m=>m.parentId===id).map(m=>m.firestoreId)];
+  await Promise.all(toDelete.map(did=>window.fbDeleteDoc(window.fbDoc(window.db,'mitteilungen',did))));
+  shiftMitIds=shiftMitIds.filter(i=>i!==id);
+  saveShiftMitIds();
+}
+//Mitteilungen Ende
+
+// ── SCHICHT-EIGENE MITTEILUNGEN (Anmeldeübersicht-Box) ────────────────
+const MIT_PLACEHOLDER='Etwas im Park ist kaputt, Getränke leer, Handschuhe leer, Gurte zur Reinigung?';
+function renderShiftMitBox(){
+  const box=document.getElementById('s-mit-box');
+  if(!box)return;
+  const mine=shiftMitIds.map(id=>mitteilungen.find(m=>m.firestoreId===id)).filter(Boolean);
+  const addBtn=`<button onclick="openMitAdd()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#fff5f5;color:#dc2626;border:1px solid #fca5a5;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Mitteilung hinzufügen
+    </button>`;
+  if(mine.length===0){
+    box.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${esc(MIT_PLACEHOLDER)}</div>${addBtn}`;
+    return;
+  }
+  box.innerHTML=mine.map(m=>{
+    const done=!!m.done;
+    const doneBtn=done
+      ? `<button class="icoBtn edit" title="Wieder öffnen" onclick="undoMitDone('${m.firestoreId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>`
+      : `<button class="icoBtn edit" title="Als erledigt markieren" onclick="markMitDone('${m.firestoreId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg></button>`;
+    return `<div style="border:1px solid #fca5a5;border-radius:var(--radius);background:#fff5f5;padding:9px 12px;margin-bottom:8px${done?';opacity:.55':''}">
+      ${done?'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">✓ Erledigt</div>':''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="font-size:13px;white-space:pre-wrap;flex:1;color:${done?'var(--text)':'#991b1b'}">${esc(m.text)}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${doneBtn}
+          <button class="icoBtn" title="Löschen" onclick="deleteMitThread('${m.firestoreId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('')+addBtn;
+}
+function openMitAdd(){
+  document.getElementById('mit-add-text').value='';
+  document.getElementById('m-mit-add').style.display='flex';
+  setTimeout(()=>document.getElementById('mit-add-text').focus(),50);
+}
+async function sendMitAdd(){
+  const ta=document.getElementById('mit-add-text');
+  const text=ta.value.trim();
+  if(!text)return;
+  const author=document.getElementById('s-name').value.trim()||'Unbekannt';
+  const ref=await window.fbAddDoc(window.fbCollection(window.db,'mitteilungen'),{
+    text,author,ts:new Date().toISOString(),parentId:null,done:false
+  });
+  shiftMitIds.push(ref.id);
+  saveShiftMitIds();
+  ta.value='';
+  closeM('m-mit-add');
+}
+function saveShiftMitIds(){
+  window.fbSetDoc(window.fbDoc(window.db,'session','current'),{shiftMitIds},{merge:true});
+  renderShiftMitBox();
+}
+
+// ── BEWERTUNG (Sterne) ─────────────────────────────────────────────────
+function renderStars(n){
+  const box=document.getElementById('rating-stars');
+  if(!box)return;
+  let html='';
+  for(let i=1;i<=5;i++){
+    const gold=i<=n;
+    html+=`<button onclick="setRating(${i})" title="${i} Stern${i!==1?'e':''}" style="background:none;border:none;padding:2px;cursor:pointer;line-height:0">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="${gold?'#f5b301':'#d1d5db'}" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </button>`;
+  }
+  box.innerHTML=html;
+}
+function setRating(n){
+  currentRating=n;
+  renderStars(currentRating);
+  window.fbSetDoc(window.fbDoc(window.db,'session','current'),{rating:currentRating},{merge:true});
+}
+let ratingTextTimer=null;
+function onRatingTextInput(){
+  const el=document.getElementById('rating-text');
+  if(!el)return;
+  currentRatingText=el.value;
+  clearTimeout(ratingTextTimer);
+  ratingTextTimer=setTimeout(()=>{
+    window.fbSetDoc(window.fbDoc(window.db,'session','current'),{ratingText:currentRatingText},{merge:true});
+  },500);
+}
+async function addRatingForEmployee(name,value,text){
+  const cleanName=(name||'').trim();
+  if(!cleanName)return;
+  const id=cleanName.replace(/[\/\s]+/g,'_');
+  await window.fbSetDoc(window.fbDoc(window.db,'mitarbeiter',id),{
+    name:cleanName,
+    ratings:window.fbArrayUnion({value,text:(text||'').trim(),ts:new Date().toISOString()})
+  },{merge:true});
+}
+
+let view='kasse', cartCollapsed=false;
+let delConfirmId=null;
+let editId=null, editItems=[], editDiscs=[], editPay='bar';
+let archivEditShiftId=null, archivEditOrderIdx=null;
+let edVType='fixed', vType='fixed';
+let kasseStart='';
+
+// ── BOOT ─────────────────────────────────────────────────────────────
+async function init(){
+  buildGrid('g-normal',CATS.normal);
+  buildGrid('g-erm',CATS.erm);
+  buildGrid('g-sch',CATS.sch);
+  buildGrid('g-kiosk',CATS.kiosk);
+  buildYC();
+  buildEdAddCat();
+  renderCart();
+  renderShiftMitBox();
+  renderStars(0);
+  startRealtimeSync();
+  startNotizenSync();
+}
+window.addEventListener('firebase-ready', init);
+
+function buildGrid(id,cats){
+  const el=document.getElementById(id);
+  cats.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='pcard';
+    b.innerHTML=`<div class="ph"><div><div class="pn">${c.name}</div><div class="pa">${c.age}</div></div><svg class="plus-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div class="pp">${c.price}&nbsp;€</div>`;
+    b.onclick=()=>addCatToCart(c);
+    el.appendChild(b);
+  });
+}
+function buildYC(){
+  const g=document.getElementById('yc-grid');
+  YEAR_CARDS.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='ycbtn';
+    b.innerHTML=`<h4>${c.name}</h4><div class="ya">${c.age}</div><div class="yp">${c.price}€</div>`;
+    b.onclick=()=>{addCatToCart(c);closeM('m-yc')};
+    g.appendChild(b);
+  });
+}
+function buildEdAddCat(){
+  const s=document.getElementById('ed-addcat');
+  ALL_CATS.forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.id;o.textContent=`${c.name} (${c.age}) – ${c.price}€`;
+    s.appendChild(o);
+  });
+}
+
+// ── VIEW ──────────────────────────────────────────────────────────────
+function setView(v){
+  view=v;
+  document.getElementById('kv').style.display=v==='kasse'?'':'none';
+  document.getElementById('ov').style.display=v==='orders'?'':'none';
+  document.getElementById('av').style.display=v==='archiv'?'':'none';
+  document.getElementById('mv').style.display=v==='mitteilungen'?'':'none';
+  const rp=document.getElementById('rp');
+  const bar=document.getElementById('cart-bar');
+  if(v==='kasse'){
+    if(cartCollapsed){rp.classList.add('hidden');bar.classList.add('visible');}
+    else{rp.classList.remove('hidden');bar.classList.remove('visible');}
+  } else {
+    rp.classList.add('hidden');bar.classList.remove('visible');
+  }
+  document.getElementById('btn-kasse').classList.toggle('active',v==='kasse');
+  document.getElementById('btn-orders').classList.toggle('active',v==='orders');
+  document.getElementById('btn-mitteilungen').classList.toggle('active',v==='mitteilungen');
+  if(v==='orders')renderOrders();
+  if(v==='archiv')renderArchiv();
+  if(v==='mitteilungen')renderMitteilungen();
+}
+
+// ── CART COLLAPSE ─────────────────────────────────────────────────────
+function collapseCart(){
+  cartCollapsed=true;
+  document.getElementById('rp').classList.add('hidden');
+  document.getElementById('cart-bar').classList.add('visible');
+  document.getElementById('lp').classList.add('cart-collapsed');
+  syncBarState();
+}
+function expandCart(){
+  cartCollapsed=false;
+  document.getElementById('rp').classList.remove('hidden');
+  document.getElementById('cart-bar').classList.remove('visible');
+  document.getElementById('lp').classList.remove('cart-collapsed');
+}
+function syncBarState(){
+  // Sync name
+  document.getElementById('bar-cname').value=document.getElementById('cname').value;
+  // Sync cc toggle
+  document.getElementById('bar-cc-toggle').checked=document.getElementById('cc-toggle').checked;
+  // Update total & btns
+  const tot=getTotal();
+  document.getElementById('bar-total').textContent=fmt(tot);
+  const ok=cart.length>0&&document.getElementById('cname').value.trim().length>0;
+  document.getElementById('bar-pay-bar').disabled=!ok;
+  document.getElementById('bar-pay-ec').disabled=!ok;
+}
+function syncBarName(){
+  document.getElementById('cname').value=document.getElementById('bar-cname').value;
+  updPayBtns();
+}
+function syncCC(){
+  document.getElementById('cc-toggle').checked=document.getElementById('bar-cc-toggle').checked;
+}
+
+// ── CART ──────────────────────────────────────────────────────────────
+function addCatToCart(cat){
+  const ex=cart.find(i=>i.type==='cat'&&i.id===cat.id);
+  if(ex){ex.qty++;}else{cart.push({type:'cat',id:cat.id,name:cat.name,age:cat.age,price:cat.price,qty:1});}
+  renderCart();
+}
+function setQty(idx,v){
+  const q=parseInt(v);
+  if(!isNaN(q)&&q>0){cart[idx].qty=q;}else if(q<=0){cart.splice(idx,1);}
+  renderCart();
+}
+function removeItem(idx){cart.splice(idx,1);renderCart();}
+function clearCart(){cart=[];discounts=[];pendingRechnungAdresse='';updateRechnungCacheIndicator();renderCart();}
+function removeDisc(idx){discounts.splice(idx,1);renderCart();}
+
+function subTotal(){return cart.reduce((s,i)=>s+i.price*i.qty,0);}
+function totalDiscs(){return discounts.reduce((s,d)=>s+d.amount,0);}
+function getTotal(){return subTotal()-totalDiscs();}
+
+function renderCart(){
+  const container=document.getElementById('ci');
+  const empty=document.getElementById('cempty');
+  const clrBtn=document.getElementById('clr-btn');
+  const ds=document.getElementById('dstrip');
+
+  clrBtn.style.display=cart.length>0?'':'none';
+  ds.style.display=cart.length>0?'':'none';
+
+  if(cart.length===0){
+    container.innerHTML='';container.appendChild(empty);empty.style.display='flex';
+  } else {
+    empty.style.display='none';
+    container.innerHTML=cart.map((it,i)=>`
+      <div class="citem">
+        <div class="cit">
+          <div><div class="cin">${esc(it.name)}</div><div class="cia">${esc(it.age||it.price+'€')}</div></div>
+          <button class="icoBtn" onclick="removeItem(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        </div>
+        <div class="cib">
+          <div class="qrow">
+            <button class="qbtn" onclick="setQty(${i},${it.qty-1})">−</button>
+            <input class="qin" type="number" min="1" value="${it.qty}" onchange="setQty(${i},this.value)">
+            <button class="qbtn" onclick="setQty(${i},${it.qty+1})">+</button>
+          </div>
+          <div style="text-align:right"><div class="cpd">${it.qty} × ${it.price} €</div><div class="cpt">${fmt(it.qty*it.price)}</div></div>
+        </div>
+      </div>`).join('');
+    container.appendChild(empty);
+  }
+
+  // Discounts
+  document.getElementById('dlist').innerHTML=discounts.map((d,i)=>`
+    <div class="ditem">
+      <span>${esc(d.label||d.type)}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="ditem-amt">-${fmt(d.amount)}</span>
+        <button class="dremove" onclick="removeDisc(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      </div>
+    </div>`).join('');
+
+  const hasDis=discounts.length>0;
+  document.getElementById('subrow').style.display=hasDis?'flex':'none';
+  document.getElementById('discrow').style.display=hasDis?'flex':'none';
+  if(hasDis){
+    document.getElementById('subval').textContent=fmt(subTotal());
+    document.getElementById('discval').textContent='-'+fmt(totalDiscs());
+  }
+  document.getElementById('totdisp').textContent=fmt(getTotal());
+  updPayBtns();
+  if(cartCollapsed)syncBarState();
+}
+
+function updPayBtns(){
+  const n=document.getElementById('cname').value.trim();
+  const ok=cart.length>0&&n.length>0;
+  document.getElementById('pay-bar').disabled=!ok;
+  document.getElementById('pay-ec').disabled=!ok;
+  document.getElementById('pay-rechnung').disabled=!ok;
+  if(cartCollapsed){
+    document.getElementById('bar-pay-bar').disabled=!ok;
+    document.getElementById('bar-pay-ec').disabled=!ok;
+    document.getElementById('bar-pay-rechnung').disabled=!ok;
+    document.getElementById('bar-total').textContent=fmt(getTotal());
+  }
+  syncCheckoutHeight();
+}
+
+// ── COMPLETE ORDER ────────────────────────────────────────────────────
+function completeOrder(method){
+  const name=document.getElementById('cname').value.trim()||document.getElementById('bar-cname').value.trim();
+  if(!name||cart.length===0)return;
+  document.getElementById('cname').value=name;
+  if(method==='rechnung'){
+    document.getElementById('rechnung-adresse').value=pendingRechnungAdresse;
+    document.getElementById('rechnung-adresse').style.borderColor='';
+    document.getElementById('m-rechnung').style.display='flex';
+    setTimeout(()=>document.getElementById('rechnung-adresse').focus(),50);
+    return;
+  }
+  const useCC=document.getElementById('cc-toggle').checked||document.getElementById('bar-cc-toggle').checked;
+  if(method==='bar'&&useCC){
+    document.getElementById('wg-tot-val').textContent=fmt(getTotal());
+    document.getElementById('wg-input').value='';
+    document.getElementById('wg-result').innerHTML='';
+    document.getElementById('wg-confirm').disabled=true;
+    document.getElementById('m-wg').style.display='flex';
+    return;
+  }
+  finalizeOrder(method,null,null,null);
+}
+
+function confirmRechnung(){
+  const addr=document.getElementById('rechnung-adresse').value.trim();
+  if(!addr){document.getElementById('rechnung-adresse').style.borderColor='#dc2626';return;}
+  document.getElementById('rechnung-adresse').style.borderColor='';
+  closeM('m-rechnung');
+  pendingRechnungAdresse='';
+  updateRechnungCacheIndicator();
+  finalizeOrder('rechnung',null,null,addr);
+}
+
+// ── ZWISCHENSPEICHER RECHNUNGSADRESSE ──────────────────────────────
+// Erlaubt es, das PopUp zu verlassen (z.B. um die Anmeldung noch zu bearbeiten),
+// ohne die bereits eingegebene Rechnungsadresse zu verlieren.
+function onRechnungAdresseInput(){
+  pendingRechnungAdresse=document.getElementById('rechnung-adresse').value;
+  updateRechnungCacheIndicator();
+}
+function discardRechnungCache(){
+  pendingRechnungAdresse='';
+  document.getElementById('rechnung-adresse').value='';
+  document.getElementById('rechnung-adresse').style.borderColor='';
+  updateRechnungCacheIndicator();
+}
+function updateRechnungCacheIndicator(){
+  const has=pendingRechnungAdresse.trim().length>0;
+  ['rechnung-cache-hint','bar-rechnung-cache-hint'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=has?'flex':'none';
+  });
+}
+
+async function finalizeOrder(method,given,change,invoiceAddress){
+  const name=document.getElementById('cname').value.trim();
+  const order={
+    id:Date.now().toString(),
+    name,
+    items:cart.map(i=>({...i})),
+    discounts:discounts.map(d=>({...d})),
+    total:getTotal(),
+    method,
+    ts:new Date().toISOString(),
+    given,
+    change
+  };
+  if(invoiceAddress) order.invoiceAddress=invoiceAddress;
+
+  await window.fbAddDoc(
+    window.fbCollection(window.db,"orders"),
+    order
+  );
+
+  cart=[];
+  discounts=[];
+
+  document.getElementById('cname').value='';
+  document.getElementById('bar-cname').value='';
+
+  renderCart();
+  resetKasseEnde();
+}
+
+// ── WECHSELGELD ───────────────────────────────────────────────────────
+function calcWg(){
+  const given=parseFloat(document.getElementById('wg-input').value)||0;
+  const tot=getTotal();
+  const res=document.getElementById('wg-result');
+  const btn=document.getElementById('wg-confirm');
+  if(!document.getElementById('wg-input').value){res.innerHTML='';btn.disabled=true;return;}
+  if(given<tot){
+    res.innerHTML=`<div class="wg-err">Betrag ist zu niedrig</div>`;btn.disabled=true;
+  } else {
+    res.innerHTML=`<div class="wg-ok"><div class="wg-lbl">Rückgeld</div><div class="wg-val">${fmt(given-tot)}</div></div>`;
+    btn.disabled=false;
+  }
+}
+function completeWithChange(){
+  const given=parseFloat(document.getElementById('wg-input').value)||0;
+  closeM('m-wg');
+  finalizeOrder('bar',given,given-getTotal(),null);
+}
+
+// ── ORDERS ────────────────────────────────────────────────────────────
+function updOrderCnt(){document.getElementById('ocnt').textContent=`Anmeldungen (${orders.length})`;}
+
+function renderOrders(){
+  const list=document.getElementById('olist');
+  const empty=document.getElementById('oempty');
+  const bar=orders.filter(o=>o.method==='bar');
+  const ec=orders.filter(o=>o.method==='ec');
+  const rechnung=orders.filter(o=>o.method==='rechnung');
+  const tot=orders.reduce((s,o)=>s+o.total,0);
+  document.getElementById('st-tot').textContent=fmt(tot);
+  document.getElementById('st-cas').textContent=fmt(bar.reduce((s,o)=>s+o.total,0));
+  document.getElementById('st-ec').textContent=fmt(ec.reduce((s,o)=>s+o.total,0));
+  document.getElementById('st-cn').textContent=`${bar.length} Anmeldung${bar.length!==1?'en':''}`;
+  document.getElementById('st-en').textContent=`${ec.length} Anmeldung${ec.length!==1?'en':''}`;
+  document.getElementById('st-rech').textContent=fmt(rechnung.reduce((s,o)=>s+o.total,0));
+  document.getElementById('st-rn').textContent=`${rechnung.length} Anmeldung${rechnung.length!==1?'en':''}`;
+  document.getElementById('st-rec-box').style.display=rechnung.length>0?'block':'none';
+  calcKasse();
+
+  if(orders.length===0){list.innerHTML='';list.appendChild(empty);empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=orders.map(o=>{
+    const isConf=delConfirmId===o.id;
+    const isRechnung=o.method==='rechnung';
+    const cardBg=isRechnung?'background:#fff5f5;border-color:#fca5a5':'';
+    const discsHtml=o.discounts&&o.discounts.length>0
+      ?o.discounts.map(d=>`<div class="odisc"><span>${esc(d.label||d.type)}</span><span>-${fmt(d.amount)}</span></div>`).join(''):'';
+    const changeHtml=(o.given!=null&&o.change!=null)?`<div class="ochange">Gegeben: ${fmt(o.given)} | Rückgeld: ${fmt(o.change)}</div>`:'';
+    const editedHtml=o.editedTs?` <span style="font-style:italic">(bearbeitet ${fmtTs(o.editedTs)})</span>`:'';
+    const invoiceHtml=isRechnung&&o.invoiceAddress?`<div style="margin-top:5px;padding:6px 9px;background:#fee2e2;border-radius:6px;font-size:11px;color:#991b1b;white-space:pre-wrap">📄 <strong>Rechnungsadresse:</strong><br>${esc(o.invoiceAddress)}</div>`:'';
+    const badgeLabel=o.method==='bar'?'Bar':o.method==='ec'?'EC':'Rechnung';
+    const cd=countdownInfo(o.ts);
+    const tsIso=(o.ts instanceof Date?o.ts:new Date(o.ts)).toISOString();
+    const hasClimber=(o.items||[]).some(isClimberItem);
+    const noteColHtml=hasClimber?`
+        <div class="onote-col no-print">
+          <span class="cd-badge ${cd.cls}" id="cd-${o.id}" title="Restzeit (2,5 Std. ab Anmeldung)">${cd.txt}</span>
+          <span class="onote-lbl">Notiz (Kasse &amp; Wald)</span>
+          <textarea class="note-input${(notizen[o.id]||'').trim()?' has-note':''}" id="note-${o.id}" placeholder="z. B. Gruppe spricht nur Englisch…" oninput="onNoteInput('${o.id}','${tsIso}')">${esc(notizen[o.id]||'')}</textarea>
+        </div>`:'';
+    return `
+    <div class="ocard" id="oc-${o.id}" style="${isRechnung?'background:#fff5f5;border-color:#fca5a5':''}">
+      ${isConf?`<div class="confOverlay"><div class="confBox">
+        <h3>Anmeldung löschen?</h3><p>Anmeldung von „${esc(o.name)}" wirklich löschen?</p>
+        <div class="cbtns"><button class="cbtn" onclick="cancelDel()">Abbrechen</button><button class="cbtn danger" onclick="confirmDel('${o.id}')">Löschen</button></div>
+      </div></div>`:''}
+      <div class="oin">
+        <div class="oleft">
+          <div class="oname">${esc(o.name)}</div>
+          <div class="ometa"><span class="otot">${fmt(o.total)}</span><span class="badge ${o.method}">${badgeLabel}</span></div>
+          ${changeHtml}
+          ${invoiceHtml}
+          <div class="otime">${fmtTs(o.ts)}${editedHtml}</div>
+        </div>
+        <div class="oright">
+          ${o.items.map(it=>`<div class="orow"><span class="orow-n">${esc(it.name)}${it.age?' ('+esc(it.age)+')':''}</span><span class="orow-p">${it.qty} × ${it.price} € = ${fmt(it.qty*it.price)}</span></div>`).join('')}
+          ${discsHtml}
+        </div>
+        ${noteColHtml}
+        <div class="oacts no-print">
+          <button class="icoBtn edit" onclick="startEdit('${o.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icoBtn" onclick="askDel('${o.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  list.appendChild(empty);
+  updateCountdowns();
+  applyNotizenToDom();
+}
+function askDel(id){delConfirmId=id;renderOrders();}
+function cancelDel(){delConfirmId=null;renderOrders();}
+
+async function confirmDel(id){
+
+  const order=orders.find(o=>o.id===id);
+
+  if(order?.firestoreId){
+    await window.fbDeleteDoc(
+      window.fbDoc(window.db,"orders",order.firestoreId)
+    );
+  } else {
+    orders=orders.filter(o=>o.id!==id);
+    renderOrders();
+  }
+  delConfirmId=null;
+}
+
+// ── KASSENRECHNER ─────────────────────────────────────────────────────
+function calcKasse(save=true){
+  const ks=document.getElementById('k-start').value;
+  const ke=document.getElementById('k-end').value;
+  const ku=document.getElementById('k-umsch').value;
+  if(ks)kasseStart=ks;
+  if(save)saveSession();
+  // Sync print values
+  document.getElementById('kp-s').textContent=ks?parseFloat(ks).toFixed(2)+'€':'–';
+  document.getElementById('kp-e').textContent=ke?parseFloat(ke).toFixed(2)+'€':'–';
+  document.getElementById('kp-u').textContent=ku?parseFloat(ku).toFixed(2)+'€':'–';
+  const res=document.getElementById('kres');
+  if(!ks||!ke||!ku){res.style.display='none';return;}
+  const cashRev=orders.filter(o=>o.method==='bar').reduce((s,o)=>s+o.total,0);
+  const soll=parseFloat(ks)+cashRev;
+  const ist=parseFloat(ke)+parseFloat(ku);
+  const diff=soll-ist;
+  const ok=Math.abs(diff)<0.01;
+  res.style.display='';
+  res.className='kres '+(ok?'ok':'err');
+  res.innerHTML=ok?'✓ Kasse stimmt':`✗ Kasse stimmt nicht &nbsp;–&nbsp; Differenz: <strong>${diff>0?diff.toFixed(2)+' € fehlen':Math.abs(diff).toFixed(2)+' € zu viel'} in der Kasse</strong>`;
+
+}
+function resetKasseEnde(){
+  document.getElementById('k-end').value='';
+  document.getElementById('k-umsch').value='';
+  document.getElementById('kres').style.display='none';
+  document.getElementById('kp-e').textContent='–';
+  document.getElementById('kp-u').textContent='–';
+}
+
+// ── SCHICHT ───────────────────────────────────────────────────────────
+function syncPrint(save=true){
+  document.getElementById('ps-n').textContent=document.getElementById('s-name').value||'–';
+  document.getElementById('ps-d').textContent=document.getElementById('s-date').value||'–';
+  document.getElementById('ps-f').textContent=document.getElementById('s-from').value||'–';
+  document.getElementById('ps-t').textContent=document.getElementById('s-to').value||'–';
+  if(save)saveSession();
+}
+
+// ── VOUCHER ───────────────────────────────────────────────────────────
+function openVoucher(){
+  document.getElementById('mv-amount').value='';document.getElementById('mv-pct').value='';
+  vType='fixed';
+  document.getElementById('vt-fixed').classList.add('active');document.getElementById('vt-pct').classList.remove('active');
+  document.getElementById('v-fixed').style.display='';document.getElementById('v-pct').style.display='none';
+  document.getElementById('v-items').innerHTML=cart.map((it,i)=>`
+    <label class="chkrow"><input type="checkbox" value="${i}" style="width:13px;height:13px">
+    ${esc(it.name)}${it.age?' ('+esc(it.age)+')':''} – ${it.qty}× à ${it.price}€</label>`).join('');
+  document.getElementById('m-voucher').style.display='flex';
+  setTimeout(()=>document.getElementById('mv-amount').focus(),50);
+}
+function setVType(t){
+  vType=t;
+  document.getElementById('vt-fixed').classList.toggle('active',t==='fixed');
+  document.getElementById('vt-pct').classList.toggle('active',t==='percent');
+  document.getElementById('v-fixed').style.display=t==='fixed'?'':'none';
+  document.getElementById('v-pct').style.display=t==='percent'?'':'none';
+}
+function applyVoucher(){
+  if(vType==='fixed'){
+    const amt=parseFloat(document.getElementById('mv-amount').value);
+    if(isNaN(amt)||amt<=0)return;
+    discounts.push({type:'voucher',amount:amt,label:'Gutschein eingelöst'});
+  } else {
+    const pct=parseFloat(document.getElementById('mv-pct').value);
+    if(isNaN(pct)||pct<=0)return;
+    const checked=[...document.getElementById('v-items').querySelectorAll('input:checked')].map(e=>parseInt(e.value));
+    if(checked.length===0)return;
+    let total=0;checked.forEach(idx=>{const it=cart[idx];if(it)total+=it.price*it.qty*pct/100;});
+    discounts.push({type:'voucher',amount:total,label:`Gutschein (${pct}%) eingelöst`});
+  }
+  closeM('m-voucher');renderCart();
+}
+
+// ── FREECARD ──────────────────────────────────────────────────────────
+function openFreecard(){
+  const sel=document.getElementById('fc-item');
+  sel.innerHTML='<option value="">Bitte wählen…</option>';
+  cart.forEach((it,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${it.name}${it.age?' ('+it.age+')':''} – ${it.price}€`;sel.appendChild(o);});
+  document.getElementById('fc-qty').value='1';
+  document.getElementById('fc-qty-row').style.display='none';
+  document.getElementById('fc-apply').disabled=true;
+  document.getElementById('m-fc').style.display='flex';
+}
+function updFcMax(){
+  const idx=parseInt(document.getElementById('fc-item').value);
+  const qr=document.getElementById('fc-qty-row'),ab=document.getElementById('fc-apply');
+  if(isNaN(idx)){qr.style.display='none';ab.disabled=true;return;}
+  const it=cart[idx];
+  document.getElementById('fc-qty').max=it.qty;document.getElementById('fc-qty').value='1';
+  document.getElementById('fc-hint').textContent=`Maximal ${it.qty} Stück verfügbar`;
+  qr.style.display='';ab.disabled=false;
+}
+function applyFreecard(){
+  const idx=parseInt(document.getElementById('fc-item').value);
+  const qty=Math.min(parseInt(document.getElementById('fc-qty').value),cart[idx]?.qty||1);
+  if(isNaN(idx)||isNaN(qty)||qty<=0)return;
+  const it=cart[idx];
+  discounts.push({type:'freecard',amount:it.price*qty,label:`Freikarte (${qty}×) eingelöst`});
+  closeM('m-fc');renderCart();
+}
+
+// ── CUSTOM ────────────────────────────────────────────────────────────
+function openCustom(){
+  document.getElementById('mc-reason').value='';document.getElementById('mc-price').value='';
+  document.getElementById('m-custom').style.display='flex';
+  setTimeout(()=>document.getElementById('mc-reason').focus(),50);
+}
+function addCustom(){
+  const reason=document.getElementById('mc-reason').value.trim();
+  const price=parseFloat(document.getElementById('mc-price').value);
+  if(!reason||isNaN(price)||price===0)return;
+  cart.push({type:'custom',name:reason,price,qty:1});
+  closeM('m-custom');renderCart();
+}
+function openYearCards(){document.getElementById('m-yc').style.display='flex';}
+
+// ── EDIT ──────────────────────────────────────────────────────────────
+function startEdit(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  editId=id;editItems=o.items.map(i=>({...i}));editDiscs=o.discounts?o.discounts.map(d=>({...d})):[];editPay=o.method;
+  document.getElementById('ed-name').value=o.name;
+  setEdPay(editPay);
+  document.getElementById('ed-addcat').value='';
+  renderEdItems();renderEdDiscs();
+  document.getElementById('ed-voucher-section').style.display='none';
+  document.getElementById('edv-amt').value='';document.getElementById('edv-pctval').value='';
+  edVType='fixed';
+  document.getElementById('edvt-fixed').classList.add('active');document.getElementById('edvt-pct').classList.remove('active');
+  document.getElementById('edv-fixed').style.display='';document.getElementById('edv-pct').style.display='none';
+  document.getElementById('m-edit').style.display='flex';
+}
+function setEdPay(p){
+  editPay=p;
+  document.getElementById('ed-bar').classList.toggle('active',p==='bar');
+  document.getElementById('ed-ec').classList.toggle('active',p==='ec');
+  if(p==='bar'){document.getElementById('ed-bar').style.cssText='background:#16a34a;color:#fff;border-color:#16a34a';document.getElementById('ed-ec').style.cssText='';}
+  else{document.getElementById('ed-ec').style.cssText='background:#2563eb;color:#fff;border-color:#2563eb';document.getElementById('ed-bar').style.cssText='';}
+}
+function edAddCat(){
+  const v=document.getElementById('ed-addcat').value;if(!v)return;
+  const cat=ALL_CATS.find(c=>c.id===v);if(!cat)return;
+  const ex=editItems.find(i=>i.id===cat.id);
+  if(ex)ex.qty++;else editItems.push({type:'cat',id:cat.id,name:cat.name,age:cat.age,price:cat.price,qty:1});
+  document.getElementById('ed-addcat').value='';renderEdItems();
+}
+function renderEdItems(){
+  const el=document.getElementById('ed-items');
+  if(editItems.length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px">Keine Artikel</div>';return;}
+  el.innerHTML=editItems.map((it,i)=>`
+    <div class="edit-item">
+      <div class="edit-item-info"><div class="edit-item-name">${esc(it.name)}</div><div class="edit-item-age">${esc(it.age||'')}</div></div>
+      <div class="qrow">
+        <button class="qbtn" onclick="edQty(${i},${it.qty-1})">−</button>
+        <input class="qin" type="number" min="1" value="${it.qty}" onchange="edQty(${i},this.value)">
+        <button class="qbtn" onclick="edQty(${i},${it.qty+1})">+</button>
+      </div>
+      <div style="text-align:right;min-width:60px"><div style="font-size:10px;color:var(--muted)">${it.qty}×${it.price}€</div><div style="font-size:12px;font-weight:600">${fmt(it.qty*it.price)}</div></div>
+      <button class="icoBtn" onclick="edRemove(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+    </div>`).join('');
+}
+function edQty(i,v){const q=parseInt(v);if(!isNaN(q)&&q>0){editItems[i].qty=q;}else if(q<=0){editItems.splice(i,1);}renderEdItems();}
+function edRemove(i){editItems.splice(i,1);renderEdItems();}
+function renderEdDiscs(){
+  const el=document.getElementById('ed-discounts');
+  if(editDiscs.length===0){el.innerHTML='';return;}
+  el.innerHTML=editDiscs.map((d,i)=>`
+    <div class="edit-disc-row">
+      <span>${esc(d.label||d.type)}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-weight:600">-${fmt(d.amount)}</span>
+        <button class="dremove" onclick="edRemoveDisc(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      </div>
+    </div>`).join('');
+}
+function edRemoveDisc(i){editDiscs.splice(i,1);renderEdDiscs();}
+function toggleEdVoucher(){
+  const el=document.getElementById('ed-voucher-section');
+  el.style.display=el.style.display==='none'?'':'none';
+  if(el.style.display!=='none'){
+    document.getElementById('edv-items').innerHTML=editItems.map((it,i)=>`
+      <label class="chkrow"><input type="checkbox" value="${i}" style="width:12px;height:12px">
+      ${esc(it.name)} – ${it.qty}× à ${it.price}€</label>`).join('');
+  }
+}
+function setEdVType(t){
+  edVType=t;
+  document.getElementById('edvt-fixed').classList.toggle('active',t==='fixed');
+  document.getElementById('edvt-pct').classList.toggle('active',t==='percent');
+  document.getElementById('edv-fixed').style.display=t==='fixed'?'':'none';
+  document.getElementById('edv-pct').style.display=t==='percent'?'':'none';
+}
+function applyEdVoucher(){
+  if(edVType==='fixed'){
+    const amt=parseFloat(document.getElementById('edv-amt').value);
+    if(isNaN(amt)||amt<=0)return;
+    editDiscs.push({type:'voucher',amount:amt,label:'Gutschein eingelöst'});
+  } else {
+    const pct=parseFloat(document.getElementById('edv-pctval').value);
+    if(isNaN(pct)||pct<=0)return;
+    const checked=[...document.getElementById('edv-items').querySelectorAll('input:checked')].map(e=>parseInt(e.value));
+    if(checked.length===0)return;
+    let total=0;checked.forEach(idx=>{const it=editItems[idx];if(it)total+=it.price*it.qty*pct/100;});
+    editDiscs.push({type:'voucher',amount:total,label:`Gutschein (${pct}%) eingelöst`});
+  }
+  document.getElementById('ed-voucher-section').style.display='none';
+  document.getElementById('edv-amt').value='';document.getElementById('edv-pctval').value='';
+  renderEdDiscs();
+}
+function cancelEdVoucher(){
+  document.getElementById('ed-voucher-section').style.display='none';
+  document.getElementById('edv-amt').value='';document.getElementById('edv-pctval').value='';
+}
+async function saveEdit(){
+  if(!editId)return;
+  if(editId==='__archiv__'){await saveArchivEdit();return;}
+  const sub=editItems.reduce((s,it)=>s+it.price*it.qty,0);
+  const dis=editDiscs.reduce((s,d)=>s+d.amount,0);
+  const name=document.getElementById('ed-name').value.trim();
+  const order=orders.find(o=>o.id===editId);
+  if(order?.firestoreId){
+    const updated={...order,name:name||order.name,items:[...editItems],discounts:[...editDiscs],total:Math.max(0,sub-dis),method:editPay,editedTs:new Date().toISOString()};
+    const {firestoreId,...data}=updated;
+    await window.fbSetDoc(window.fbDoc(window.db,'orders',firestoreId),data);
+  } else {
+    orders=orders.map(o=>o.id===editId?{...o,name:name||o.name,items:[...editItems],discounts:[...editDiscs],total:Math.max(0,sub-dis),method:editPay,editedTs:new Date()}:o);
+    renderOrders();
+  }
+  closeM('m-edit');editId=null;editItems=[];editDiscs=[];
+}
+function cancelEdit(){closeM('m-edit');editId=null;editItems=[];editDiscs=[];archivEditShiftId=null;archivEditOrderIdx=null;}
+
+// ── SCHICHT BEENDEN ───────────────────────────────────────────────────
+function openSchichtBeenden(){
+  const warnings=[];
+  if(!document.getElementById('s-name').value.trim()) warnings.push('⚠️ Mitarbeitername fehlt');
+  if(!document.getElementById('s-date').value) warnings.push('⚠️ Datum fehlt');
+  if(!document.getElementById('s-from').value) warnings.push('⚠️ Schicht-Startzeit fehlt');
+  if(!document.getElementById('s-to').value) warnings.push('⚠️ Schicht-Endzeit fehlt');
+  if(!document.getElementById('k-start').value) warnings.push('⚠️ Kasse Start fehlt');
+  if(!document.getElementById('k-end').value) warnings.push('⚠️ Kasse Ende fehlt');
+  if(!document.getElementById('k-umsch').value) warnings.push('⚠️ Betrag Umschlag fehlt');
+  if(!currentRating) warnings.push('⚠️ Bewertung der vorgefundenen Kasse fehlt');
+  const wBox=document.getElementById('sb-warnings');
+  const rMsg=document.getElementById('sb-ready-msg');
+  if(warnings.length>0){
+    wBox.style.display='flex';
+    wBox.innerHTML=warnings.map(w=>`<div style="background:#fef9c3;border:1px solid #fde047;border-radius:7px;padding:8px 11px;font-size:12px;color:#854d0e">${w}</div>`).join('');
+    rMsg.textContent='Du kannst die Schicht trotzdem beenden – fehlende Infos werden dann nicht gespeichert.';
+  } else {
+    wBox.style.display='none';
+    rMsg.textContent='Alle Informationen sind vollständig. Die Schicht wird ins Archiv gespeichert und das Formular zurückgesetzt.';
+  }
+  const btn=document.getElementById('sb-confirm-btn');
+  btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';btn.textContent='Schicht beenden';
+  document.getElementById('m-schicht-beenden').style.display='flex';
+}
+// ── ARCHIV LOGIN ──────────────────────────────────────────────────────
+function openArchivLogin(){
+  document.getElementById('al-pw').value='';
+  document.getElementById('al-err').style.display='none';
+  const btn=document.getElementById('al-confirm-btn');
+  btn.disabled=true;btn.style.opacity='.4';btn.style.cursor='not-allowed';
+  document.getElementById('m-archiv-login').style.display='flex';
+  setTimeout(()=>document.getElementById('al-pw').focus(),50);
+}
+function checkAlPw(){
+  const v=document.getElementById('al-pw').value;
+  const ok=(v===archivPw||v==='MASTER!');
+  const btn=document.getElementById('al-confirm-btn');
+  btn.disabled=!ok;btn.style.opacity=ok?'1':'.4';btn.style.cursor=ok?'pointer':'not-allowed';
+  document.getElementById('al-err').style.display='none';
+}
+function confirmArchivLogin(){
+  const v=document.getElementById('al-pw').value;
+  if(v!==archivPw&&v!=='MASTER!'){
+    document.getElementById('al-err').style.display='block';return;
+  }
+  closeM('m-archiv-login');
+  document.getElementById('al-pw').value='';
+  setView('archiv');
+}
+async function confirmSchichtBeenden(){
+  const wasFullscreen=!!document.fullscreenElement;
+  const prevShiftName=shifts[0]?shifts[0].sName:null;
+  const ratingGiven=currentRating;
+  const ratingTextGiven=currentRatingText;
+  const btn=document.getElementById('sb-confirm-btn');
+  btn.textContent='Speichere…';btn.disabled=true;
+  // Snapshot aller aktuellen Daten erstellen
+  const sessionSnap=await window.fbGetDocs(window.fbCollection(window.db,'orders'));
+  const archivedOrders=[];
+  sessionSnap.forEach(d=>archivedOrders.push({firestoreId:d.id,...d.data()}));
+  const mitTexts=shiftMitIds.map(id=>mitteilungen.find(m=>m.firestoreId===id)).filter(Boolean).map(m=>m.text);
+  const shift={
+    archivedAt:new Date().toISOString(),
+    sName:document.getElementById('s-name').value,
+    sDate:document.getElementById('s-date').value,
+    sFrom:document.getElementById('s-from').value,
+    sTo:document.getElementById('s-to').value,
+    kStart:document.getElementById('k-start').value,
+    kEnd:document.getElementById('k-end').value,
+    kUmsch:document.getElementById('k-umsch').value,
+    mitteilung:mitTexts.join('\n\n'),
+    orders:archivedOrders,
+    totalRevenue:archivedOrders.reduce((s,o)=>s+(o.total||0),0),
+    totalBar:archivedOrders.filter(o=>o.method==='bar').reduce((s,o)=>s+(o.total||0),0),
+    totalEc:archivedOrders.filter(o=>o.method==='ec').reduce((s,o)=>s+(o.total||0),0),
+    totalRechnung:archivedOrders.filter(o=>o.method==='rechnung').reduce((s,o)=>s+(o.total||0),0),
+    rechnungPending:archivedOrders.some(o=>o.method==='rechnung'),
+    rechnungDone:false,
+  };
+  await window.fbAddDoc(window.fbCollection(window.db,'shifts'),shift);
+  // Bewertung der vorgefundenen Kasse dem Mitarbeiter der letzten Schicht gutschreiben
+  if(ratingGiven>0&&prevShiftName){
+    await addRatingForEmployee(prevShiftName,ratingGiven,ratingTextGiven);
+  }
+  // Alle orders löschen
+  const dels=[];
+  sessionSnap.forEach(d=>dels.push(window.fbDeleteDoc(window.fbDoc(window.db,'orders',d.id))));
+  await Promise.all(dels);
+  // Session zurücksetzen
+  await window.fbSetDoc(window.fbDoc(window.db,'session','current'),{
+    sName:'',sDate:'',sFrom:'',sTo:'',kStart:'',kEnd:'',kUmsch:'',shiftMitIds:[],rating:0,ratingText:''
+  });
+  ['s-name','s-date','s-from','s-to','k-start','k-end','k-umsch'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('rating-text').value='';
+  shiftMitIds=[];currentRating=0;currentRatingText='';
+  renderShiftMitBox();renderStars(0);
+  syncPrint(false);calcKasse(false);
+  closeM('m-schicht-beenden');
+  setView('orders');
+  // Erfolgsmeldung anzeigen
+  const msg=document.createElement('div');
+  msg.textContent='Die Schicht wurde erfolgreich beendet';
+  msg.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none';
+  document.body.appendChild(msg);
+  setTimeout(()=>msg.remove(),3500);
+  // Vollbildmodus automatisch verlassen + Hinweis anzeigen
+  if(wasFullscreen){
+    if(document.fullscreenElement) await document.exitFullscreen().catch(()=>{});
+    document.getElementById('m-vollbild-hinweis').style.display='flex';
+  }
+}
+
+// ── ARCHIV RENDER ─────────────────────────────────────────────────────
+function renderArchiv(){
+  const list=document.getElementById('alist');
+  if(shifts.length===0){
+    list.innerHTML='<div class="oempty">Noch keine archivierten Schichten vorhanden</div>';
+    return;
+  }
+  // Schichten sind bereits nach archivedAt absteigend sortiert (neueste oben).
+  // Für Tages-/Monatsblöcke gruppieren wir nach sDate.
+  let html='';
+  let lastDay='', lastMonth='';
+  let dayShifts=[], monthShifts=[];
+  // Wir iterieren rückwärts, um Blöcke von neu→alt aufzubauen
+  const sorted=[...shifts]; // bereits sortiert neueste zuerst
+  // Gruppen aufbauen
+  const groups=[]; // [{month, days:[{day, shifts:[...]}]}]
+  sorted.forEach(s=>{
+    const dateKey=s.sDate||'';
+    const monthKey=dateKey?dateKey.slice(0,7):'';
+    let mg=groups.find(g=>g.month===monthKey);
+    if(!mg){mg={month:monthKey,days:[]};groups.push(mg);}
+    let dg=mg.days.find(d=>d.day===dateKey);
+    if(!dg){dg={day:dateKey,shifts:[]};mg.days.push(dg);}
+    dg.shifts.push(s);
+  });
+
+  groups.forEach(mg=>{
+    // Monats-Header
+    const monthTotal=mg.days.reduce((acc,dg)=>acc+dg.shifts.reduce((a,s)=>a+(s.totalRevenue||0),0),0);
+    const monthLabel=mg.month?new Date(mg.month+'-01').toLocaleDateString('de-DE',{month:'long',year:'numeric'}):'Datum unbekannt';
+    html+=`<div style="margin:18px 0 8px;padding:10px 14px;background:var(--primary);color:var(--pfg);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:700">${monthLabel}</span>
+      <span style="font-size:13px;font-weight:700">Gesamt: ${fmt(monthTotal)}</span>
+    </div>`;
+
+    mg.days.forEach(dg=>{
+      const dayTotal=dg.shifts.reduce((a,s)=>a+(s.totalRevenue||0),0);
+      const dayLabel=dg.day?new Date(dg.day+'T00:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):'Datum unbekannt';
+      html+=`<div style="margin:10px 0 5px;padding:6px 12px;background:var(--accent);border-radius:8px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border)">
+        <span style="font-size:12px;font-weight:600;color:var(--text)">${dayLabel}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--muted)">Tagessum.: ${fmt(dayTotal)}</span>
+      </div>`;
+
+      dg.shifts.forEach(s=>{
+        const d=s.sDate?new Date(s.sDate).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):null;
+        const timeRange=(s.sFrom||s.sTo)?(s.sFrom||'')+(s.sTo?' – '+s.sTo:''):'';
+        const archived=s.archivedAt?new Date(s.archivedAt):'';
+        const cnt=s.orders?s.orders.length:0;
+        const titleLine=timeRange?timeRange:'Uhrzeit unbekannt';
+        const mittBadge=s.mitteilung&&s.mitteilung.trim()?`<span style="display:inline-block;margin-left:8px;padding:2px 7px;border-radius:20px;background:#dc2626;color:#fff;font-size:10px;font-weight:700;vertical-align:middle">⚠ Mitteilung</span>`:'';
+        html+=`<div class="ocard" style="cursor:pointer;margin-bottom:6px" onclick="openArchivDetail('${s.firestoreId}')">
+          <div class="oin">
+            <div class="oleft" style="width:auto;flex:1">
+              <div class="oname" style="font-size:15px;font-weight:700;margin-bottom:2px">${titleLine}${mittBadge}</div>
+              <div style="font-size:12px;color:var(--muted);font-weight:500;margin-bottom:5px">${esc(s.sName||'Unbekannt')}</div>
+              <div class="ometa"><span class="otot" style="font-size:14px">${fmt(s.totalRevenue||0)}</span></div>
+            </div>
+            <div class="oright" style="max-width:220px">
+              <div class="orow"><span class="orow-n">Anmeldungen</span><span class="orow-p">${cnt}</span></div>
+              <div class="orow"><span class="orow-n">Bar</span><span class="orow-p">${fmt(s.totalBar||0)}</span></div>
+              <div class="orow"><span class="orow-n">EC</span><span class="orow-p">${fmt(s.totalEc||0)}</span></div>
+              <div class="orow" style="margin-top:3px"><span class="orow-n" style="font-size:10px">Archiviert: ${archived?fmtTs(archived):'–'}</span></div>
+            </div>
+            <div class="oacts no-print">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--muted)"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>`;
+      });
+    });
+  });
+  list.innerHTML=html;
+}
+function openArchivDetail(firestoreId){
+  const s=shifts.find(x=>x.firestoreId===firestoreId);
+  if(!s)return;
+  const d=s.sDate?new Date(s.sDate).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):null;
+  document.getElementById('ad-title').textContent=`Schicht – ${esc(s.sName||'Unbekannt')}${d?' · '+d:''}`;
+  // Schichtinfos
+  document.getElementById('ad-schicht').innerHTML=`
+    <div><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:2px">Mitarbeiter</span><strong>${esc(s.sName||'–')}</strong></div>
+    <div><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:2px">Datum</span><strong>${d||'–'}</strong></div>
+    <div><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:2px">Von</span><strong>${esc(s.sFrom||'–')}</strong></div>
+    <div><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:2px">Bis</span><strong>${esc(s.sTo||'–')}</strong></div>`;
+  // Kasseinfos
+  const adBarRev=(s.orders||[]).filter(o=>o.method==='bar').reduce((sum,o)=>sum+(o.total||0),0);
+  const adKasseCheck=(()=>{
+    if(!s.kStart||!s.kEnd||!s.kUmsch)return'';
+    const soll=parseFloat(s.kStart)+adBarRev;
+    const ist=parseFloat(s.kEnd)+parseFloat(s.kUmsch);
+    const diff=soll-ist;
+    const adOk=Math.abs(diff)<0.01;
+    return `<div style="grid-column:1/-1;margin-top:4px;padding:7px 10px;border-radius:7px;border:1px solid ${adOk?'var(--grbr)':'var(--rdbr)'};background:${adOk?'var(--grbg)':'var(--rdbg)'};color:${adOk?'var(--grtx)':'var(--rdtx)'};font-size:11px;font-weight:600">${adOk?'✓ Kasse stimmt':'✗ Kasse stimmt nicht – Differenz: '+( diff>0?diff.toFixed(2)+' € fehlen':Math.abs(diff).toFixed(2)+' € zu viel')+' in der Kasse'}</div>`;
+  })();
+  document.getElementById('ad-kasse').innerHTML=`
+    <div><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:2px">Kasse Start</span><strong>${s.kStart?parseFloat(s.kStart).toFixed(2)+' €':'–'}</strong></div>
+    <div><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:2px">Kasse Ende</span><strong>${s.kEnd?parseFloat(s.kEnd).toFixed(2)+' €':'–'}</strong></div>
+    <div><span style="color:var(--muted);display:block;font-size:10px;margin-bottom:2px">Betrag Umschlag</span><strong>${s.kUmsch?parseFloat(s.kUmsch).toFixed(2)+' €':'–'}</strong></div>
+    ${adKasseCheck}`;
+  // Bemerkungen / Mitteilungen
+  const notizenParts=[];
+  if(s.mitteilung&&s.mitteilung.trim()){
+    notizenParts.push(`<div style="padding:10px 12px;border-radius:8px;border:1px solid #fca5a5;background:#fff5f5;margin-bottom:8px"><div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠ Wichtige Mitteilung</div><div style="font-size:13px;white-space:pre-wrap">${esc(s.mitteilung)}</div></div>`);
+  }
+  document.getElementById('ad-notizen').innerHTML=notizenParts.join('');
+  const bar=(s.orders||[]).filter(o=>o.method==='bar');
+  const ec=(s.orders||[]).filter(o=>o.method==='ec');
+  const rech=(s.orders||[]).filter(o=>o.method==='rechnung');
+  document.getElementById('ad-stats').innerHTML=`
+    <div class="sbox tot"><div class="slbl">Gesamtumsatz</div><div class="sval">${fmt(s.totalRevenue||0)}</div></div>
+    <div class="sbox cas"><div class="slbl">Baranteil</div><div class="sval">${fmt(s.totalBar||0)}</div><div class="ssub">${bar.length} Anmeldung${bar.length!==1?'en':''}</div></div>
+    <div class="sbox ecc"><div class="slbl">EC-Anteil</div><div class="sval">${fmt(s.totalEc||0)}</div><div class="ssub">${ec.length} Anmeldung${ec.length!==1?'en':''}</div></div>
+    ${rech.length>0?`<div class="sbox" style="border-color:#fca5a5;background:#fff5f5"><div class="slbl" style="color:#dc2626">Rechnung</div><div class="sval" style="color:#dc2626">${fmt(s.totalRechnung||0)}</div><div class="ssub">${rech.length} Anmeldung${rech.length!==1?'en':''}</div></div>`:''}`;
+  // Orders
+  const ol=document.getElementById('ad-orders');
+  if(!s.orders||s.orders.length===0){
+    ol.innerHTML='<div class="oempty">Keine Anmeldungen in dieser Schicht</div>';
+  } else {
+    ol.innerHTML=[...(s.orders||[])].sort((a,b)=>new Date(b.ts)-new Date(a.ts)).map((o,oidx)=>{
+      const isR=o.method==='rechnung';
+      const discsHtml=o.discounts&&o.discounts.length>0
+        ?o.discounts.map(d=>`<div class="odisc"><span>${esc(d.label||d.type)}</span><span>-${fmt(d.amount)}</span></div>`).join(''):'';
+      const changeHtml=(o.given!=null&&o.change!=null)?`<div class="ochange">Gegeben: ${fmt(o.given)} | Rückgeld: ${fmt(o.change)}</div>`:'';
+      const invoiceHtml=isR&&o.invoiceAddress?`<div style="margin-top:5px;padding:6px 9px;background:#fee2e2;border-radius:6px;font-size:11px;color:#991b1b;white-space:pre-wrap">📄 <strong>Rechnungsadresse:</strong><br>${esc(o.invoiceAddress)}</div>`:'';
+      const badgeLabel=isR?'Rechnung':o.method==='bar'?'Bar':'EC';
+      return `
+      <div class="ocard" style="${isR?'background:#fff5f5;border-color:#fca5a5':''}">
+        <div class="oin">
+          <div class="oleft">
+            <div class="oname">${esc(o.name)}</div>
+            <div class="ometa"><span class="otot">${fmt(o.total)}</span><span class="badge ${o.method}">${badgeLabel}</span></div>
+            ${changeHtml}
+            ${invoiceHtml}
+            <div class="otime">${fmtTs(o.ts)}${o.editedTs?` <span style="font-style:italic">(bearbeitet ${fmtTs(o.editedTs)})</span>`:''}</div>
+          </div>
+          <div class="oright">
+            ${(o.items||[]).map(it=>`<div class="orow"><span class="orow-n">${esc(it.name)}${it.age?' ('+esc(it.age)+')':''}</span><span class="orow-p">${it.qty} × ${it.price} € = ${fmt(it.qty*it.price)}</span></div>`).join('')}
+            ${discsHtml}
+          </div>
+          <div class="oacts no-print">
+            <button class="icoBtn edit" title="Anmeldung bearbeiten" onclick="event.stopPropagation();startArchivEdit('${s.firestoreId}',${oidx})">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('m-archiv-detail').style.display='flex';
+}
+
+// ── ARCHIV LÖSCHEN + PASSWORT ────────────────────────────────────────────
+function openArchivLoeschen(){
+  document.getElementById('m-archiv-loeschen').style.display='flex';
+}
+async function confirmArchivLoeschen(){
+  const btn=document.getElementById('al-del-btn');
+  btn.textContent='Lösche…';btn.disabled=true;
+  const snap=await window.fbGetDocs(window.fbCollection(window.db,'shifts'));
+  const dels=[];
+  snap.forEach(d=>dels.push(window.fbDeleteDoc(window.fbDoc(window.db,'shifts',d.id))));
+  await Promise.all(dels);
+  btn.textContent='Alles löschen';btn.disabled=false;
+  closeM('m-archiv-loeschen');
+  const msg=document.createElement('div');
+  msg.textContent='Archiv wurde gelöscht';
+  msg.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#dc2626;color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none';
+  document.body.appendChild(msg);setTimeout(()=>msg.remove(),3000);
+}
+
+function openChangePw(){
+  document.getElementById('cp-old').value='';
+  document.getElementById('cp-new').value='';
+  document.getElementById('cp-new2').value='';
+  document.getElementById('cp-old-err').style.display='none';
+  document.getElementById('cp-new-err').style.display='none';
+  document.getElementById('cp-new-section').style.display='none';
+  const btn=document.getElementById('cp-save-btn');
+  btn.disabled=true;btn.style.opacity='.4';btn.style.cursor='not-allowed';
+  document.getElementById('m-change-pw').style.display='flex';
+  setTimeout(()=>document.getElementById('cp-old').focus(),50);
+}
+function checkCpOld(){
+  const v=document.getElementById('cp-old').value;
+  const ok=(v===archivPw||v==='MASTER!');
+  document.getElementById('cp-new-section').style.display=ok?'':'none';
+  document.getElementById('cp-old-err').style.display='none';
+  if(!ok){
+    const btn=document.getElementById('cp-save-btn');
+    btn.disabled=true;btn.style.opacity='.4';btn.style.cursor='not-allowed';
+  }
+  checkCpNew();
+}
+function checkCpNew(){
+  const n1=document.getElementById('cp-new').value;
+  const n2=document.getElementById('cp-new2').value;
+  const oldOk=(document.getElementById('cp-old').value===archivPw||document.getElementById('cp-old').value==='MASTER!');
+  const match=(n1.length>0&&n1===n2);
+  document.getElementById('cp-new-err').style.display=(n2.length>0&&!match)?'block':'none';
+  const btn=document.getElementById('cp-save-btn');
+  const ok=oldOk&&match;
+  btn.disabled=!ok;btn.style.opacity=ok?'1':'.4';btn.style.cursor=ok?'pointer':'not-allowed';
+}
+async function saveNewPw(){
+  const newPw=document.getElementById('cp-new').value;
+  if(!newPw)return;
+  await window.fbSetDoc(window.fbDoc(window.db,'config','archiv'),{pw:newPw});
+  archivPw=newPw;
+  closeM('m-change-pw');
+  const msg=document.createElement('div');
+  msg.textContent='Passwort wurde geändert';
+  msg.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none';
+  document.body.appendChild(msg);setTimeout(()=>msg.remove(),3000);
+}
+
+// ── ARCHIV EDIT ────────────────────────────────────────────────────────
+function startArchivEdit(shiftFirestoreId, orderIdx){
+  const s=shifts.find(x=>x.firestoreId===shiftFirestoreId);
+  if(!s||!s.orders||!s.orders[orderIdx])return;
+  const o=s.orders[orderIdx];
+  archivEditShiftId=shiftFirestoreId;
+  archivEditOrderIdx=orderIdx;
+  editId='__archiv__';
+  editItems=o.items?o.items.map(i=>({...i})):[];
+  editDiscs=o.discounts?o.discounts.map(d=>({...d})):[];
+  editPay=o.method||'bar';
+  document.getElementById('ed-name').value=o.name||'';
+  setEdPay(editPay);
+  document.getElementById('ed-addcat').value='';
+  renderEdItems();renderEdDiscs();
+  document.getElementById('ed-voucher-section').style.display='none';
+  document.getElementById('edv-amt').value='';document.getElementById('edv-pctval').value='';
+  edVType='fixed';
+  document.getElementById('edvt-fixed').classList.add('active');document.getElementById('edvt-pct').classList.remove('active');
+  document.getElementById('edv-fixed').style.display='';document.getElementById('edv-pct').style.display='none';
+  document.getElementById('m-edit').style.display='flex';
+}
+
+async function saveArchivEdit(){
+  const s=shifts.find(x=>x.firestoreId===archivEditShiftId);
+  if(!s||archivEditOrderIdx===null)return;
+  const sub=editItems.reduce((sum,it)=>sum+it.price*it.qty,0);
+  const dis=editDiscs.reduce((sum,d)=>sum+d.amount,0);
+  const newTotal=Math.max(0,sub-dis);
+  const name=document.getElementById('ed-name').value.trim();
+  const updatedOrders=[...s.orders];
+  updatedOrders[archivEditOrderIdx]={
+    ...updatedOrders[archivEditOrderIdx],
+    name:name||updatedOrders[archivEditOrderIdx].name,
+    items:[...editItems],
+    discounts:[...editDiscs],
+    total:newTotal,
+    method:editPay,
+    editedTs:new Date().toISOString()
+  };
+  const newTotalRevenue=updatedOrders.reduce((sum,o)=>sum+(o.total||0),0);
+  const newTotalBar=updatedOrders.filter(o=>o.method==='bar').reduce((sum,o)=>sum+(o.total||0),0);
+  const newTotalEc=updatedOrders.filter(o=>o.method==='ec').reduce((sum,o)=>sum+(o.total||0),0);
+  const {firestoreId,...shiftData}=s;
+  await window.fbSetDoc(window.fbDoc(window.db,'shifts',archivEditShiftId),{
+    ...shiftData,
+    orders:updatedOrders,
+    totalRevenue:newTotalRevenue,
+    totalBar:newTotalBar,
+    totalEc:newTotalEc,
+  });
+  closeM('m-edit');
+  editId=null;editItems=[];editDiscs=[];
+  archivEditShiftId=null;archivEditOrderIdx=null;
+  // Detail-Modal aktualisieren (Firestore-Snapshot triggert renderArchiv, danach neu öffnen)
+  setTimeout(()=>{
+    const updated=shifts.find(x=>x.firestoreId===shiftData.firestoreId||x.firestoreId===s.firestoreId);
+    if(updated)openArchivDetail(updated.firestoreId);
+  },400);
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function closeM(id){document.getElementById(id).style.display='none';}
+function fmt(v){return (v<0?'-':'')+Math.abs(v).toFixed(2).replace('.',',')+' €';}
+function fmtTs(d){if(!d)return'–';const dt=d&&d.toDate?d.toDate():d instanceof Date?d:new Date(d);if(!dt||isNaN(dt))return'–';return dt.toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+
+// ── PRINT (Dashboard-Formatierung) ───────────────────────────────────
+function escP(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtP(v){return(v<0?'-':'')+Math.abs(v).toFixed(2).replace('.',',')+' €';}
+
+function buildPrKasseCheck(kStart,kEnd,kUmsch,barRevenue){
+  if(!kStart||!kEnd||!kUmsch)return'';
+  const soll=parseFloat(kStart)+barRevenue;
+  const ist=parseFloat(kEnd)+parseFloat(kUmsch);
+  const diff=soll-ist;
+  const ok=Math.abs(diff)<0.01;
+  const color=ok?'#166534':'#991b1b';
+  const bg=ok?'#f0fdf4':'#fef2f2';
+  const border=ok?'#bbf7d0':'#fecaca';
+  const msg=ok?'✓ Kasse stimmt':`✗ Kasse stimmt nicht – Differenz: ${diff>0?diff.toFixed(2)+' € fehlen':Math.abs(diff).toFixed(2)+' € zu viel'} in der Kasse`;
+  return `<div style="margin:8px 0 10px;padding:8px 11px;border-radius:7px;border:1px solid ${border};background:${bg};color:${color};font-size:10px;font-weight:600">${msg}</div>`;
+}
+
+function buildPrStats(tot,bar,ec,rechnung){
+  rechnung=rechnung||[];
+  const barTot=bar.reduce((s,o)=>s+o.total,0);
+  const ecTot=ec.reduce((s,o)=>s+o.total,0);
+  const rechTot=rechnung.reduce((s,o)=>s+o.total,0);
+  return `<div class="pr-stats">
+    <div class="pr-stat tot"><span class="lbl">Gesamtumsatz</span><span class="val">${fmtP(tot)}</span></div>
+    <div class="pr-stat cas"><span class="lbl">Bar</span><div class="val-row"><span class="val">${fmtP(barTot)}</span><span class="sub">${bar.length} Anmeldung${bar.length!==1?'en':''}</span></div></div>
+    <div class="pr-stat ecc"><span class="lbl">EC</span><div class="val-row"><span class="val">${fmtP(ecTot)}</span><span class="sub">${ec.length} Anmeldung${ec.length!==1?'en':''}</span></div></div>
+    ${rechnung.length>0?`<div class="pr-stat rec"><span class="lbl">Rechnung</span><div class="val-row"><span class="val">${fmtP(rechTot)}</span><span class="sub">${rechnung.length} Anmeldung${rechnung.length!==1?'en':''}</span></div></div>`:''}
+  </div>`;
+}
+
+function buildPrOrder(o){
+  const discs=(o.discounts||[]).map(d=>`<div class="pr-odisc"><span>${escP(d.label||d.type)}</span><span>-${fmtP(d.amount)}</span></div>`).join('');
+  const change=(o.given!=null&&o.change!=null)?`<div class="pr-ochange">Gegeben: ${fmtP(o.given)} | Rückgeld: ${fmtP(o.change)}</div>`:'';
+  const ts=fmtTs(o.ts);
+  const editedNote=o.editedTs?` <span style="font-style:italic">(bearbeitet ${fmtTs(o.editedTs)})</span>`:'';
+  return `<div class="pr-ocard"><div class="pr-oin">
+    <div class="pr-oleft">
+      <div class="pr-oname">${escP(o.name)}</div>
+      <div class="pr-ometa"><span class="pr-otot">${fmtP(o.total)}</span><span class="pr-badge ${o.method}">${o.method==='bar'?'Bar':o.method==='ec'?'EC':'Rechnung'}</span></div>
+      ${change}<div class="pr-otime">${ts}${editedNote}</div>
+    </div>
+    <div class="pr-oright">
+      ${(o.items||[]).map(it=>`<div class="pr-orow"><span class="pr-orow-n">${escP(it.name)}${it.age?' ('+escP(it.age)+')':''}</span><span class="pr-orow-p">${it.qty} × ${it.price} € = ${fmtP(it.qty*it.price)}</span></div>`).join('')}
+      ${discs}
+    </div>
+  </div></div>`;
+}
+
+function kassenPrint(){
+  const sName=document.getElementById('s-name').value;
+  const sDate=document.getElementById('s-date').value;
+  const sFrom=document.getElementById('s-from').value;
+  const sTo=document.getElementById('s-to').value;
+  const kStart=document.getElementById('k-start').value;
+  const kEnd=document.getElementById('k-end').value;
+  const kUmsch=document.getElementById('k-umsch').value;
+  const dateDisp=sDate?new Date(sDate+'T00:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'–';
+  const bar=orders.filter(o=>o.method==='bar');
+  const ec=orders.filter(o=>o.method==='ec');
+  const rechnung=orders.filter(o=>o.method==='rechnung');
+  const tot=orders.reduce((s,o)=>s+o.total,0);
+  const infoFields=[['Mitarbeiter',sName||'–'],['Datum',dateDisp],['Von',sFrom||'–'],['Bis',sTo||'–']];
+  const kasseFields=[
+    ['Kasse Start',kStart?parseFloat(kStart).toFixed(2)+' €':'–'],
+    ['Kasse Ende',kEnd?parseFloat(kEnd).toFixed(2)+' €':'–'],
+    ['Umschlag',kUmsch?parseFloat(kUmsch).toFixed(2)+' €':'–'],
+  ];
+  const html=`<div class="pr-page">
+    <div class="pr-header">
+      <div class="pr-title">Kletterwald Paderborn – Aktuelle Schicht</div>
+      <div class="pr-sub">Erstellt: ${new Date().toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+    <div class="pr-info-grid">${infoFields.map(([l,v])=>`<div class="pr-info-cell"><span class="lbl">${escP(l)}</span><span class="val">${escP(v)}</span></div>`).join('')}</div>
+    <div class="pr-kasse-grid">${kasseFields.map(([l,v])=>`<div class="pr-info-cell"><span class="lbl">${escP(l)}</span><span class="val">${escP(v)}</span></div>`).join('')}</div>
+    ${buildPrKasseCheck(kStart,kEnd,kUmsch,bar.reduce((s,o)=>s+o.total,0))}
+    ${buildPrStats(tot,bar,ec,rechnung)}
+    ${(()=>{
+      const mit=shiftMitIds.map(id=>mitteilungen.find(m=>m.firestoreId===id)).filter(Boolean).map(m=>m.text).join('\n\n');
+      let n='';
+      if(mit) n+=`<div style="margin:8px 0;padding:6px 10px;border:1px solid #fca5a5;border-radius:6px;background:#fff5f5"><div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;margin-bottom:3px">⚠ Wichtige Mitteilung</div><div style="font-size:10px;white-space:pre-wrap">${escP(mit)}</div></div>`;
+      return n;
+    })()}
+    <div class="pr-section-lbl">Anmeldungen (${orders.length})</div>
+    <div class="pr-olist">${orders.length===0?'<div style="color:#999;font-style:italic;font-size:10px">Keine Anmeldungen vorhanden.</div>':orders.map(o=>buildPrOrder(o)).join('')}</div>
+  </div>`;
+  document.getElementById('print-area').innerHTML=html;
+  window.print();
+  setTimeout(()=>{document.getElementById('print-area').innerHTML='';},1500);
+}
+// ── VOLLBILD ──────────────────────────────────────────────────────
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(e=>console.warn('Vollbild nicht möglich:',e));
+  } else {
+    document.exitFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange',()=>{
+  const active=!!document.fullscreenElement;
+  document.getElementById('fs-icon-enter').style.display=active?'none':'block';
+  document.getElementById('fs-icon-exit').style.display=active?'block':'none';
+  document.getElementById('fs-label').textContent=active?'Vollbild beenden':'Vollbild';
+});
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}
+
+// ── CHECKOUT-HÖHE DYNAMISCH TRACKEN ──────────────────────────────
+// Hält den padding-bottom von #rp-inner synchron mit der Höhe von .checkout,
+// damit der Warenkorb-Inhalt nie hinter dem absolut positionierten Checkout verschwindet.
+function syncCheckoutHeight(){
+  const co=document.querySelector('.checkout');
+  const inner=document.getElementById('rp-inner');
+  if(!co||!inner) return;
+  const h=co.offsetHeight;
+  co.style.bottom=h+'px';
+  inner.style.paddingBottom=(h*2+16)+'px';
+}
+const _coObs=new ResizeObserver(syncCheckoutHeight);
+document.addEventListener('DOMContentLoaded',()=>{
+  const co=document.querySelector('.checkout');
+  if(co) _coObs.observe(co);
+  syncCheckoutHeight();
+});
+
+// ── KASSEN-PASSWORT-GATE ─────────────────────────────────────────
+let kassenPw='Dom'; // Fallback, wird aus Firestore (config/kassenpw) überschrieben
+function checkKassenGate(){
+  const v=document.getElementById('kassen-gate-pw').value;
+  const ok=(v===kassenPw);
+  const btn=document.getElementById('kassen-gate-btn');
+  btn.disabled=!ok; btn.style.opacity=ok?'1':'.4';
+  document.getElementById('kassen-gate-err').style.display='none';
+}
+function confirmKassenGate(){
+  const v=document.getElementById('kassen-gate-pw').value;
+  if(v!==kassenPw){document.getElementById('kassen-gate-err').style.display='block';return;}
+  document.getElementById('kassen-gate').style.display='none';
+  document.getElementById('kassen-gate-pw').value='';
+}
+</script>
+<div id="print-area"></div>
+</body>
+</html>
